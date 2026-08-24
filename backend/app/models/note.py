@@ -1,24 +1,21 @@
 import uuid
 from typing import TYPE_CHECKING
 
-from sqlalchemy import ForeignKey, String, Text
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import Text
+from sqlmodel import Field, Relationship, SQLModel
 
-from app.models.base import Base
 from app.models.mixins import TimestampMixin
 
 if TYPE_CHECKING:
     from app.models.user import User
 
 
-class Note(Base, TimestampMixin):
+class Note(TimestampMixin, SQLModel, table=True):
     __tablename__ = "notes"
 
-    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
-    owner_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"), index=True
-    )
-    title: Mapped[str] = mapped_column(String(255))
-    content: Mapped[str] = mapped_column(Text, default="")
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    owner_id: uuid.UUID = Field(foreign_key="users.id", index=True, ondelete="CASCADE")
+    title: str = Field(max_length=255)
+    content: str = Field(default="", sa_type=Text, nullable=False)
 
-    owner: Mapped["User"] = relationship(back_populates="notes")
+    owner: "User" = Relationship(back_populates="notes")
