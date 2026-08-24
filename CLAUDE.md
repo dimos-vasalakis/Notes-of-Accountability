@@ -5,7 +5,8 @@ Note of Accountability (NoA) is a productivity & accountability system engineere
 
 
 ## Tech Stack
-- Backend: Python 3.11, FastAPI, SQLAlchemy 2.0 (Async), Alembic, Pydantic v2
+- Backend: Python 3.11, FastAPI, SQLModel (Async, on SQLAlchemy 2.0 core), Alembic, Pydantic v2
+- Frontend: TypeScript, Next.js (App Router)
 - Database: PostgreSQL 15
 - Architecture: Layered Architecture (API -> Services -> Models/Schemas)
 
@@ -15,7 +16,8 @@ Note of Accountability (NoA) is a productivity & accountability system engineere
 - Always use type hints.
 - Keep FastAPI endpoints thin. Business logic goes into service classes.
 - All database operations must be async (`async/await`).
-- Use Pydantic models for validation, SQLAlchemy for ORM.
+- Use Pydantic models for validation, SQLModel for ORM.
+- Frontend code is TypeScript only — no plain `.js`/`.jsx` files.
 - Never write hardcoded secrets; use environment variables via `pydantic-settings`.
 
 ## Commands

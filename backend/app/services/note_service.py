@@ -1,7 +1,7 @@
 import uuid
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import select
 
 from app.core.exceptions import NotFoundError
 from app.models.note import Note

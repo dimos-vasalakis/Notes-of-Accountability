@@ -1,10 +1,8 @@
 import uuid
 from typing import TYPE_CHECKING
 
-from sqlalchemy import String
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlmodel import Field, Relationship, SQLModel
 
-from app.models.base import Base
 from app.models.mixins import TimestampMixin
 
 if TYPE_CHECKING:
@@ -13,20 +11,20 @@ if TYPE_CHECKING:
     from app.models.task import Task
 
 
-class User(Base, TimestampMixin):
+class User(TimestampMixin, SQLModel, table=True):
     __tablename__ = "users"
 
-    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
-    email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
-    hashed_password: Mapped[str] = mapped_column(String(255))
-    is_active: Mapped[bool] = mapped_column(default=True)
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    email: str = Field(max_length=255, unique=True, index=True)
+    hashed_password: str = Field(max_length=255)
+    is_active: bool = Field(default=True)
 
-    notes: Mapped[list["Note"]] = relationship(
-        back_populates="owner", cascade="all, delete-orphan"
+    notes: list["Note"] = Relationship(
+        back_populates="owner", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
     )
-    tasks: Mapped[list["Task"]] = relationship(
-        back_populates="owner", cascade="all, delete-orphan"
+    tasks: list["Task"] = Relationship(
+        back_populates="owner", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
     )
-    refresh_tokens: Mapped[list["RefreshToken"]] = relationship(
-        back_populates="user", cascade="all, delete-orphan"
+    refresh_tokens: list["RefreshToken"] = Relationship(
+        back_populates="user", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
     )

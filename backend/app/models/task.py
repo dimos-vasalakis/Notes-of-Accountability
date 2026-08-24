@@ -3,10 +3,10 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, Enum, ForeignKey, String, Text
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import DateTime, Text
+from sqlalchemy import Enum as SAEnum
+from sqlmodel import Field, Relationship, SQLModel
 
-from app.models.base import Base
 from app.models.mixins import TimestampMixin
 
 if TYPE_CHECKING:
@@ -19,20 +19,17 @@ class TaskStatus(str, enum.Enum):
     DONE = "done"
 
 
-class Task(Base, TimestampMixin):
+class Task(TimestampMixin, SQLModel, table=True):
     __tablename__ = "tasks"
 
-    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
-    owner_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    owner_id: uuid.UUID = Field(foreign_key="users.id", index=True, ondelete="CASCADE")
+    title: str = Field(max_length=255)
+    description: str | None = Field(default=None, sa_type=Text)
+    status: TaskStatus = Field(
+        default=TaskStatus.TODO,
+        sa_type=SAEnum(TaskStatus, native_enum=False, length=20),
     )
-    title: Mapped[str] = mapped_column(String(255))
-    description: Mapped[str | None] = mapped_column(Text, default=None)
-    status: Mapped[TaskStatus] = mapped_column(
-        Enum(TaskStatus, native_enum=False, length=20), default=TaskStatus.TODO
-    )
-    due_date: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), default=None
-    )
+    due_date: datetime | None = Field(default=None, sa_type=DateTime(timezone=True))
 
-    owner: Mapped["User"] = relationship(back_populates="tasks")
+    owner: "User" = Relationship(back_populates="tasks")
