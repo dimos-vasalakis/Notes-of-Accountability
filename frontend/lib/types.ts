@@ -25,3 +25,13 @@ export interface Task {
   created_at: string;
   updated_at: string;
 }
+
+export interface PushSubscriptionKeys {
+  p256dh: string;
+  auth: string;
+}
+
+export interface PushSubscriptionRequest {
+  endpoint: string;
+  keys: PushSubscriptionKeys;
+}

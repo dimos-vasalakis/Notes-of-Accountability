@@ -1,12 +1,27 @@
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api.routers import auth, notes, tasks
+from app.api.routers import auth, notes, push_subscriptions, tasks
 from app.core.config import settings
 from app.core.exceptions import ConflictError, NotFoundError
+from app.services.notification_service import send_due_task_notifications
 
-app = FastAPI(title="Note of Accountability API")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    scheduler = AsyncIOScheduler()
+    scheduler.add_job(send_due_task_notifications, "interval", seconds=60)
+    scheduler.start()
+    yield
+    scheduler.shutdown()
+
+
+app = FastAPI(title="Note of Accountability API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -30,6 +45,7 @@ async def conflict_handler(request: Request, exc: ConflictError) -> JSONResponse
 app.include_router(auth.router)
 app.include_router(notes.router)
 app.include_router(tasks.router)
+app.include_router(push_subscriptions.router)
 
 
 @app.get("/health")

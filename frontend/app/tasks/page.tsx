@@ -24,6 +24,7 @@ export default function TasksPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [newTitle, setNewTitle] = useState("");
+  const [newDueDate, setNewDueDate] = useState("");
 
   async function refresh() {
     const data = await api.get<Task[]>("/api/tasks");
@@ -42,8 +43,12 @@ export default function TasksPage() {
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     if (!newTitle.trim()) return;
-    await api.post<Task>("/api/tasks", { title: newTitle });
+    await api.post<Task>("/api/tasks", {
+      title: newTitle,
+      due_date: newDueDate ? new Date(newDueDate).toISOString() : null,
+    });
     setNewTitle("");
+    setNewDueDate("");
     refresh();
   }
 
@@ -68,6 +73,12 @@ export default function TasksPage() {
           value={newTitle}
           onChange={(e) => setNewTitle(e.target.value)}
           className="flex-1 rounded border border-neutral-300 px-3 py-2 dark:border-neutral-700 dark:bg-neutral-900"
+        />
+        <input
+          type="datetime-local"
+          value={newDueDate}
+          onChange={(e) => setNewDueDate(e.target.value)}
+          className="rounded border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
         />
         <button
           type="submit"
@@ -98,6 +109,11 @@ export default function TasksPage() {
               >
                 {STATUS_LABELS[task.status]} — mark next
               </button>
+              {task.due_date && (
+                <p className="mt-1 text-xs text-neutral-400">
+                  Due {new Date(task.due_date).toLocaleString()}
+                </p>
+              )}
             </div>
             <button
               onClick={() => handleDelete(task)}

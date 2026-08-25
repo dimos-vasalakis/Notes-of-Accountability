@@ -44,7 +44,10 @@ async def update_task(
     db: AsyncSession, owner_id: uuid.UUID, task_id: uuid.UUID, data: TaskUpdate
 ) -> Task:
     task = await get_task(db, owner_id, task_id)
-    for field, value in data.model_dump(exclude_unset=True).items():
+    updates = data.model_dump(exclude_unset=True)
+    if "due_date" in updates and updates["due_date"] != task.due_date:
+        task.notified_at = None
+    for field, value in updates.items():
         setattr(task, field, value)
     await db.commit()
     await db.refresh(task)

@@ -31,5 +31,6 @@ class Task(TimestampMixin, SQLModel, table=True):
         sa_type=SAEnum(TaskStatus, native_enum=False, length=20),
     )
     due_date: datetime | None = Field(default=None, sa_type=DateTime(timezone=True))
+    notified_at: datetime | None = Field(default=None, sa_type=DateTime(timezone=True))
 
     owner: "User" = Relationship(back_populates="tasks")

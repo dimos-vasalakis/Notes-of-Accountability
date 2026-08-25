@@ -7,6 +7,7 @@ from app.models.mixins import TimestampMixin
 
 if TYPE_CHECKING:
     from app.models.note import Note
+    from app.models.push_subscription import PushSubscription
     from app.models.refresh_token import RefreshToken
     from app.models.task import Task
 
@@ -26,5 +27,8 @@ class User(TimestampMixin, SQLModel, table=True):
         back_populates="owner", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
     )
     refresh_tokens: list["RefreshToken"] = Relationship(
+        back_populates="user", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )
+    push_subscriptions: list["PushSubscription"] = Relationship(
         back_populates="user", sa_relationship_kwargs={"cascade": "all, delete-orphan"}
     )
