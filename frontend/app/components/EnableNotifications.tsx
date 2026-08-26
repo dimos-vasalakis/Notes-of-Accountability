@@ -12,14 +12,12 @@ export function EnableNotifications() {
   }
 
   return (
-    <div className="flex items-center justify-between border-b border-neutral-200 bg-neutral-50 px-6 py-2 text-sm dark:border-neutral-800 dark:bg-neutral-900">
-      <span className="text-neutral-600 dark:text-neutral-400">
-        {error ?? "Get notified when a task is due."}
-      </span>
+    <div className="flex items-center justify-between gap-4 border-b border-border bg-accent-soft px-4 py-2 text-sm sm:px-6">
+      <span className="text-accent">{error ?? "Get notified when a task is due."}</span>
       <button
         onClick={subscribe}
         disabled={loading}
-        className="text-neutral-900 underline dark:text-neutral-100"
+        className="whitespace-nowrap font-medium text-accent underline decoration-dotted underline-offset-4 hover:opacity-80 disabled:opacity-50"
       >
         {loading ? "Enabling..." : "Enable notifications"}
       </button>

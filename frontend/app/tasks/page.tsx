@@ -5,11 +5,20 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import type { Task, TaskStatus } from "@/lib/types";
 import { useRequireAuth } from "@/lib/useRequireAuth";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { Input } from "@/components/ui/Input";
 
 const STATUS_LABELS: Record<TaskStatus, string> = {
   todo: "To do",
   in_progress: "In progress",
   done: "Done",
+};
+
+const STATUS_BADGE: Record<TaskStatus, string> = {
+  todo: "bg-accent-soft text-accent",
+  in_progress: "bg-warning-soft text-warning",
+  done: "bg-success-soft text-success",
 };
 
 const STATUS_ORDER: TaskStatus[] = ["todo", "in_progress", "done"];
@@ -62,65 +71,76 @@ export default function TasksPage() {
     refresh();
   }
 
+  const doneCount = tasks.filter((t) => t.status === "done").length;
+
   return (
-    <div>
-      <h1 className="mb-6 text-2xl font-semibold">Tasks</h1>
+    <div className="animate-fade-in">
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold">Tasks</h1>
+          <p className="mt-1 text-sm text-text-muted">
+            {tasks.length > 0 ? `${doneCount} of ${tasks.length} done` : "Plan what needs to get done."}
+          </p>
+        </div>
+      </div>
 
-      <form onSubmit={handleCreate} className="mb-6 flex gap-2">
-        <input
-          type="text"
-          placeholder="New task..."
-          value={newTitle}
-          onChange={(e) => setNewTitle(e.target.value)}
-          className="flex-1 rounded border border-neutral-300 px-3 py-2 dark:border-neutral-700 dark:bg-neutral-900"
-        />
-        <input
-          type="datetime-local"
-          value={newDueDate}
-          onChange={(e) => setNewDueDate(e.target.value)}
-          className="rounded border border-neutral-300 px-3 py-2 text-sm dark:border-neutral-700 dark:bg-neutral-900"
-        />
-        <button
-          type="submit"
-          className="rounded bg-neutral-900 px-4 py-2 text-sm text-white dark:bg-white dark:text-neutral-900"
-        >
-          Add
-        </button>
-      </form>
+      <Card className="mb-6 p-4">
+        <form onSubmit={handleCreate} className="flex flex-col gap-2 sm:flex-row">
+          <Input
+            type="text"
+            placeholder="New task..."
+            value={newTitle}
+            onChange={(e) => setNewTitle(e.target.value)}
+            className="flex-1"
+          />
+          <Input
+            type="datetime-local"
+            value={newDueDate}
+            onChange={(e) => setNewDueDate(e.target.value)}
+            className="sm:w-56"
+          />
+          <Button type="submit">Add</Button>
+        </form>
+      </Card>
 
-      {loading && <p className="text-neutral-500">Loading...</p>}
+      {loading && <p className="text-text-muted">Loading...</p>}
       {!loading && tasks.length === 0 && (
-        <p className="text-neutral-500">No tasks yet.</p>
+        <Card className="flex flex-col items-center gap-2 px-6 py-14 text-center">
+          <span className="text-3xl">✅</span>
+          <p className="font-medium">No tasks yet</p>
+          <p className="text-sm text-text-muted">Add something above to get started.</p>
+        </Card>
       )}
 
       <ul className="flex flex-col gap-2">
         {tasks.map((task) => (
-          <li
-            key={task.id}
-            className="flex items-center justify-between rounded border border-neutral-200 px-4 py-3 dark:border-neutral-800"
-          >
-            <div>
-              <p className={task.status === "done" ? "line-through text-neutral-400" : ""}>
-                {task.title}
-              </p>
-              <button
-                onClick={() => handleToggleStatus(task)}
-                className="mt-1 text-xs text-neutral-500 underline"
-              >
-                {STATUS_LABELS[task.status]} — mark next
-              </button>
-              {task.due_date && (
-                <p className="mt-1 text-xs text-neutral-400">
-                  Due {new Date(task.due_date).toLocaleString()}
+          <li key={task.id}>
+            <Card className="flex items-center justify-between gap-4 p-4">
+              <div>
+                <p className={task.status === "done" ? "text-text-faint line-through" : "font-medium"}>
+                  {task.title}
                 </p>
-              )}
-            </div>
-            <button
-              onClick={() => handleDelete(task)}
-              className="text-sm text-red-600 hover:underline"
-            >
-              Delete
-            </button>
+                <div className="mt-1.5 flex items-center gap-2">
+                  <button
+                    onClick={() => handleToggleStatus(task)}
+                    className={`rounded-full px-2.5 py-0.5 text-xs font-medium transition-opacity hover:opacity-80 ${STATUS_BADGE[task.status]}`}
+                  >
+                    {STATUS_LABELS[task.status]}
+                  </button>
+                  {task.due_date && (
+                    <span className="text-xs text-text-faint">
+                      Due {new Date(task.due_date).toLocaleString()}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={() => handleDelete(task)}
+                className="text-sm text-text-faint hover:text-danger"
+              >
+                Delete
+              </button>
+            </Card>
           </li>
         ))}
       </ul>

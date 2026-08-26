@@ -1,13 +1,26 @@
 import type { Metadata } from "next";
+import { Inter, Space_Grotesk } from "next/font/google";
 
 import { NavBar } from "@/components/NavBar";
 
 import { EnableNotifications } from "./components/EnableNotifications";
 import "./globals.css";
 
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+});
+
+const spaceGrotesk = Space_Grotesk({
+  subsets: ["latin"],
+  variable: "--font-space-grotesk",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
   title: "Note of Accountability",
-  description: "Productivity & accountability system",
+  description: "Notes, tasks and focus timers for staying disciplined.",
 };
 
 export default function RootLayout({
@@ -16,11 +29,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className="min-h-screen bg-white text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100">
+    <html lang="en" className={`${inter.variable} ${spaceGrotesk.variable}`}>
+      <body className="min-h-screen bg-bg text-text">
         <NavBar />
         <EnableNotifications />
-        <main className="mx-auto max-w-3xl px-6 py-8">{children}</main>
+        <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-10">{children}</main>
       </body>
     </html>
   );
