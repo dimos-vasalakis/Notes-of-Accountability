@@ -32,5 +32,7 @@ class Task(TimestampMixin, SQLModel, table=True):
     )
     due_date: datetime | None = Field(default=None, sa_type=DateTime(timezone=True))
     notified_at: datetime | None = Field(default=None, sa_type=DateTime(timezone=True))
+    reminder_minutes_before: int | None = Field(default=None)
+    reminder_notified_at: datetime | None = Field(default=None, sa_type=DateTime(timezone=True))
 
     owner: "User" = Relationship(back_populates="tasks")

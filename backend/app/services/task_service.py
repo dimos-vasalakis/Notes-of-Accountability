@@ -14,6 +14,7 @@ async def create_task(db: AsyncSession, owner_id: uuid.UUID, data: TaskCreate) -
         title=data.title,
         description=data.description,
         due_date=data.due_date,
+        reminder_minutes_before=data.reminder_minutes_before,
     )
     db.add(task)
     await db.commit()
@@ -47,6 +48,12 @@ async def update_task(
     updates = data.model_dump(exclude_unset=True)
     if "due_date" in updates and updates["due_date"] != task.due_date:
         task.notified_at = None
+        task.reminder_notified_at = None
+    elif (
+        "reminder_minutes_before" in updates
+        and updates["reminder_minutes_before"] != task.reminder_minutes_before
+    ):
+        task.reminder_notified_at = None
     for field, value in updates.items():
         setattr(task, field, value)
     await db.commit()

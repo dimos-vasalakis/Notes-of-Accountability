@@ -152,6 +152,9 @@ activemq-data/
 .env.local
 .envrc
 .venv
+
+# VAPID keys (secrets, generated locally via `vapid --gen`)
+*.pem
 env/
 venv/
 ENV/

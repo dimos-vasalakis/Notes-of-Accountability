@@ -22,6 +22,7 @@ export interface Task {
   description: string | null;
   status: TaskStatus;
   due_date: string | null;
+  reminder_minutes_before: number | null;
   created_at: string;
   updated_at: string;
 }

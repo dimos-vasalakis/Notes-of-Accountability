@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.task import TaskStatus
 
@@ -10,6 +10,7 @@ class TaskCreate(BaseModel):
     title: str
     description: str | None = None
     due_date: datetime | None = None
+    reminder_minutes_before: int | None = Field(default=None, ge=0)
 
 
 class TaskUpdate(BaseModel):
@@ -17,6 +18,7 @@ class TaskUpdate(BaseModel):
     description: str | None = None
     status: TaskStatus | None = None
     due_date: datetime | None = None
+    reminder_minutes_before: int | None = Field(default=None, ge=0)
 
 
 class TaskRead(BaseModel):
@@ -28,5 +30,6 @@ class TaskRead(BaseModel):
     description: str | None
     status: TaskStatus
     due_date: datetime | None
+    reminder_minutes_before: int | None
     created_at: datetime
     updated_at: datetime
