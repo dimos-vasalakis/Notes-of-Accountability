@@ -6,6 +6,9 @@ import { useState } from "react";
 
 import { api, ApiError } from "@/lib/api";
 import type { UserPublic } from "@/lib/types";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { Input } from "@/components/ui/Input";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -30,37 +33,37 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="mx-auto max-w-sm">
-      <h1 className="mb-6 text-2xl font-semibold">Log in</h1>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          className="rounded border border-neutral-300 px-3 py-2 dark:border-neutral-700 dark:bg-neutral-900"
-        />
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          className="rounded border border-neutral-300 px-3 py-2 dark:border-neutral-700 dark:bg-neutral-900"
-        />
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        <button
-          type="submit"
-          disabled={submitting}
-          className="rounded bg-neutral-900 px-4 py-2 text-white disabled:opacity-50 dark:bg-white dark:text-neutral-900"
-        >
-          {submitting ? "Logging in..." : "Log in"}
-        </button>
-      </form>
-      <p className="mt-4 text-sm text-neutral-500">
+    <div className="mx-auto flex max-w-sm animate-fade-in flex-col items-center pt-8">
+      <span className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-accent font-display text-lg text-accent-contrast">
+        N
+      </span>
+      <h1 className="text-2xl font-semibold">Welcome back</h1>
+      <p className="mb-8 mt-1 text-sm text-text-muted">Log in to keep your streak going.</p>
+      <Card className="w-full p-6">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <Input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+          <Input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+          {error && <p className="text-sm text-danger">{error}</p>}
+          <Button type="submit" disabled={submitting}>
+            {submitting ? "Logging in..." : "Log in"}
+          </Button>
+        </form>
+      </Card>
+      <p className="mt-6 text-sm text-text-muted">
         No account?{" "}
-        <Link href="/signup" className="underline">
+        <Link href="/signup" className="font-medium text-accent hover:underline">
           Sign up
         </Link>
       </p>
