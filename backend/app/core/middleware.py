@@ -1,7 +1,7 @@
 import logging
 import time
 import uuid
-from collections import deque
+from collections import OrderedDict, deque
 from collections.abc import Awaitable, Callable
 
 from fastapi import Request, Response, status
@@ -62,10 +62,20 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
 class RateLimitMiddleware(BaseHTTPMiddleware):
     """In-memory sliding-window rate limiter, keyed by client IP.
 
-    Single-process only: sufficient for the current single-instance deployment.
-    If the backend is ever scaled horizontally, swap the in-memory store for a
-    shared one (e.g. Redis) so limits are enforced across instances.
+    Per-process only: in prod the backend runs with multiple uvicorn workers
+    (see backend/Dockerfile), each holding its own counters, so the effective
+    limit per client is up to max_requests * worker_count. If the backend is
+    ever scaled horizontally or needs an exact global limit, swap this for a
+    shared store (e.g. Redis).
+
+    The client key is taken from X-Real-IP when present, since the prod nginx
+    config (nginx/nginx.prod.conf) always overwrites that header with the real
+    connecting IP before proxying to the backend -- it can't be spoofed by a
+    client. Without a trusted proxy in front (e.g. local dev), it falls back
+    to the direct connection's IP.
     """
+
+    _MAX_TRACKED_CLIENTS = 10_000
 
     def __init__(
         self,
@@ -76,7 +86,14 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         super().__init__(app)
         self._max_requests = max_requests
         self._window_seconds = window_seconds
-        self._hits: dict[str, deque[float]] = {}
+        self._hits: OrderedDict[str, deque[float]] = OrderedDict()
+
+    @staticmethod
+    def _client_key(request: Request) -> str:
+        real_ip = request.headers.get("x-real-ip")
+        if real_ip:
+            return real_ip
+        return request.client.host if request.client else "unknown"
 
     async def dispatch(
         self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
@@ -84,21 +101,32 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if not settings.rate_limit_enabled or request.url.path == "/health":
             return await call_next(request)
 
-        client_key = request.client.host if request.client else "unknown"
+        client_key = self._client_key(request)
         now = time.monotonic()
         window_start = now - self._window_seconds
 
-        hits = self._hits.setdefault(client_key, deque())
-        while hits and hits[0] < window_start:
-            hits.popleft()
+        hits = self._hits.get(client_key)
+        if hits is not None:
+            while hits and hits[0] < window_start:
+                hits.popleft()
+            if not hits:
+                del self._hits[client_key]
+                hits = None
 
-        if len(hits) >= self._max_requests:
-            retry_after = max(0.0, hits[0] + self._window_seconds - now)
-            return JSONResponse(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                content={"detail": "Too many requests"},
-                headers={"Retry-After": str(int(retry_after) + 1)},
-            )
+        if hits is not None:
+            self._hits.move_to_end(client_key)
+            if len(hits) >= self._max_requests:
+                retry_after = max(0.0, hits[0] + self._window_seconds - now)
+                return JSONResponse(
+                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                    content={"detail": "Too many requests"},
+                    headers={"Retry-After": str(int(retry_after) + 1)},
+                )
+        else:
+            hits = deque()
+            self._hits[client_key] = hits
+            if len(self._hits) > self._MAX_TRACKED_CLIENTS:
+                self._hits.popitem(last=False)
 
         hits.append(now)
         return await call_next(request)
