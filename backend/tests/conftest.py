@@ -55,6 +55,10 @@ async def client(db_session: AsyncSession) -> AsyncIterator[AsyncClient]:
 
     app.dependency_overrides[get_db] = _override_get_db
     transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+    # https:// (not http://) so httpx's cookie jar stores and replays
+    # Secure-flagged cookies regardless of the developer's local
+    # COOKIE_SECURE setting -- ASGITransport never actually uses TLS, so
+    # this is just about satisfying the cookie jar's scheme check.
+    async with AsyncClient(transport=transport, base_url="https://test") as ac:
         yield ac
     app.dependency_overrides.pop(get_db, None)

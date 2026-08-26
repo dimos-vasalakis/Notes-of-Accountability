@@ -27,5 +27,8 @@ class Settings(BaseSettings):
     vapid_private_key: str | None = None
     vapid_subject: str | None = None
 
+    cookie_samesite: str = "lax"
+    cookie_secure: bool | None = None
+
 
 settings = Settings()

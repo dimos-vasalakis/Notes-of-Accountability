@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user
 from app.core.config import settings
 from app.core.db import get_db
-from app.core.exceptions import NotFoundError
+from app.core.exceptions import NotFoundError, TooManyRequestsError
 from app.models.user import User
 from app.schemas.user import UserCreate, UserLogin, UserPublic
 from app.services import auth_service
@@ -16,12 +16,13 @@ REFRESH_COOKIE = "refresh_token"
 
 
 def _set_auth_cookies(response: Response, access_token: str, refresh_token: str) -> None:
-    secure = settings.environment != "development"
+    secure = settings.cookie_secure if settings.cookie_secure is not None else settings.environment != "development"
+    samesite = settings.cookie_samesite
     response.set_cookie(
         ACCESS_COOKIE,
         access_token,
         httponly=True,
-        samesite="lax",
+        samesite=samesite,
         secure=secure,
         max_age=settings.access_token_expire_minutes * 60,
         path="/",
@@ -30,7 +31,7 @@ def _set_auth_cookies(response: Response, access_token: str, refresh_token: str)
         REFRESH_COOKIE,
         refresh_token,
         httponly=True,
-        samesite="lax",
+        samesite=samesite,
         secure=secure,
         max_age=settings.refresh_token_expire_days * 24 * 60 * 60,
         path="/",
@@ -56,7 +57,15 @@ async def signup(
 async def login(
     data: UserLogin, response: Response, db: AsyncSession = Depends(get_db)
 ) -> User:
-    user = await auth_service.authenticate_user(db, data.email, data.password)
+    try:
+        user = await auth_service.authenticate_user(db, data.email, data.password)
+    except TooManyRequestsError as exc:
+        raise HTTPException(
+            status.HTTP_429_TOO_MANY_REQUESTS,
+            str(exc),
+            headers={"Retry-After": str(exc.retry_after_seconds)},
+        ) from exc
+
     if user is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid email or password")
 
@@ -92,6 +101,17 @@ async def logout(
 ) -> None:
     if refresh_token is not None:
         await auth_service.revoke_refresh_token(db, refresh_token)
+    _clear_auth_cookies(response)
+
+
+@router.post("/logout-all", status_code=status.HTTP_204_NO_CONTENT)
+async def logout_all(
+    response: Response,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    """Revoke every refresh token for the current user, signing out all devices."""
+    await auth_service.revoke_all_refresh_tokens(db, current_user.id)
     _clear_auth_cookies(response)
 
 

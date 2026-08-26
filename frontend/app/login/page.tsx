@@ -26,7 +26,13 @@ export default function LoginPage() {
       router.push("/notes");
       router.refresh();
     } catch (err) {
-      setError(err instanceof ApiError && err.status === 401 ? "Invalid email or password" : "Something went wrong");
+      if (err instanceof ApiError && err.status === 401) {
+        setError("Invalid email or password");
+      } else if (err instanceof ApiError && err.status === 429) {
+        setError(err.message || "Too many attempts. Try again later.");
+      } else {
+        setError("Something went wrong");
+      }
     } finally {
       setSubmitting(false);
     }

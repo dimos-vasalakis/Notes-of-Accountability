@@ -17,6 +17,18 @@ def verify_password(password: str, hashed: str) -> bool:
     return bcrypt.checkpw(password.encode("utf-8"), hashed.encode("utf-8"))
 
 
+# Fixed hash to check against when no user was found, so login for a
+# nonexistent email still pays the bcrypt cost -- keeps response time
+# indistinguishable from a wrong-password attempt and avoids leaking
+# account existence via timing.
+_DUMMY_HASH = bcrypt.hashpw(b"dummy-password", bcrypt.gensalt()).decode("utf-8")
+
+
+def verify_password_timing_safe(password: str) -> bool:
+    bcrypt.checkpw(password.encode("utf-8"), _DUMMY_HASH.encode("utf-8"))
+    return False
+
+
 def _create_token(subject: str, expires_delta: timedelta, token_type: str) -> str:
     now = datetime.now(UTC)
     payload: dict[str, Any] = {
