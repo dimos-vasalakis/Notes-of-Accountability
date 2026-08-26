@@ -17,9 +17,13 @@ function urlBase64ToUint8Array(base64String: string): BufferSource {
 export function usePushNotifications() {
   const [permission, setPermission] = useState<NotificationPermission | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const supported =
-    typeof window !== "undefined" && "serviceWorker" in navigator && "PushManager" in window;
+    typeof window !== "undefined" &&
+    "serviceWorker" in navigator &&
+    "PushManager" in window &&
+    VAPID_PUBLIC_KEY !== "";
 
   useEffect(() => {
     if (supported) setPermission(Notification.permission);
@@ -28,6 +32,7 @@ export function usePushNotifications() {
   async function subscribe() {
     if (!supported) return;
     setLoading(true);
+    setError(null);
     try {
       const result = await Notification.requestPermission();
       setPermission(result);
@@ -45,10 +50,12 @@ export function usePushNotifications() {
         keys: { p256dh: json.keys!.p256dh, auth: json.keys!.auth },
       };
       await api.post("/api/push-subscriptions", body);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to enable notifications.");
     } finally {
       setLoading(false);
     }
   }
 
-  return { supported, permission, loading, subscribe };
+  return { supported, permission, loading, error, subscribe };
 }

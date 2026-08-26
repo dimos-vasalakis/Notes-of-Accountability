@@ -28,21 +28,26 @@ async def send_due_task_notifications() -> None:
             return
 
         now = datetime.now(UTC)
-        due_tasks = await db.scalars(
-            select(Task).where(
-                Task.due_date <= now,
-                Task.due_date.is_not(None),
-                Task.notified_at.is_(None),
-                Task.status != TaskStatus.DONE,
+        due_tasks = list(
+            await db.scalars(
+                select(Task).where(
+                    Task.due_date <= now,
+                    Task.due_date.is_not(None),
+                    Task.notified_at.is_(None),
+                    Task.status != TaskStatus.DONE,
+                )
             )
         )
 
+        subscriptions_by_owner = await push_subscription_service.list_subscriptions_for_users(
+            db, [task.owner_id for task in due_tasks]
+        )
+
         for task in due_tasks:
-            subscriptions = await push_subscription_service.list_subscriptions_for_user(
-                db, task.owner_id
-            )
+            subscriptions = subscriptions_by_owner.get(task.owner_id, [])
             payload = json.dumps({"title": "Task due", "body": task.title, "task_id": str(task.id)})
 
+            any_failed = False
             for subscription in subscriptions:
                 try:
                     await asyncio.to_thread(
@@ -62,8 +67,13 @@ async def send_due_task_notifications() -> None:
                     if exc.response is not None and exc.response.status_code in (404, 410):
                         await db.delete(subscription)
                     else:
+                        any_failed = True
                         logger.warning("Failed to send push notification: %s", exc)
+                except Exception:
+                    any_failed = True
+                    logger.exception("Unexpected error sending push notification")
 
-            task.notified_at = now
+            if not any_failed:
+                task.notified_at = now
 
         await db.commit()

@@ -17,7 +17,7 @@ Note of Accountability (NoA) is a productivity & accountability system engineere
 - Keep FastAPI endpoints thin. Business logic goes into service classes.
 - All database operations must be async (`async/await`).
 - Use Pydantic models for validation, SQLModel for ORM.
-- Frontend code is TypeScript only — no plain `.js`/`.jsx` files.
+- Frontend code is TypeScript only — no plain `.js`/`.jsx` files. This includes the service worker: it's served from `frontend/app/sw.js/route.ts` (a Route Handler at `/sw.js`), not `frontend/public/sw.js`.
 - Never write hardcoded secrets; use environment variables via `pydantic-settings`.
 
 ## Commands
