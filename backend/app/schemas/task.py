@@ -10,7 +10,7 @@ class TaskCreate(BaseModel):
     title: str
     description: str | None = None
     due_date: datetime | None = None
-    reminder_minutes_before: int | None = Field(default=None, ge=0)
+    reminder_minutes_before: int | None = Field(default=None, ge=1)
 
 
 class TaskUpdate(BaseModel):
@@ -18,7 +18,7 @@ class TaskUpdate(BaseModel):
     description: str | None = None
     status: TaskStatus | None = None
     due_date: datetime | None = None
-    reminder_minutes_before: int | None = Field(default=None, ge=0)
+    reminder_minutes_before: int | None = Field(default=None, ge=1)
 
 
 class TaskRead(BaseModel):

@@ -87,7 +87,7 @@ export default function TasksPage() {
     await api.post<Task>("/api/tasks", {
       title: newTitle,
       due_date: newDueDate ? new Date(newDueDate).toISOString() : null,
-      reminder_minutes_before: reminderMinutes ? Number(reminderMinutes) : null,
+      reminder_minutes_before: newDueDate && reminderMinutes ? Number(reminderMinutes) : null,
     });
     setNewTitle("");
     setNewDueDate("");

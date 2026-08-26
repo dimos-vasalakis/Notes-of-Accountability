@@ -4,7 +4,7 @@ import logging
 from datetime import UTC, datetime, timedelta
 
 from pywebpush import WebPushException, webpush
-from sqlalchemy import and_, or_, text
+from sqlalchemy import and_, func, or_, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
@@ -40,6 +40,8 @@ async def send_due_task_notifications() -> None:
                         and_(
                             Task.reminder_notified_at.is_(None),
                             Task.reminder_minutes_before.is_not(None),
+                            Task.due_date - func.make_interval(0, 0, 0, 0, 0, Task.reminder_minutes_before)
+                            <= now,
                         ),
                     ),
                 )
