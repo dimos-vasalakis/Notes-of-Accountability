@@ -19,6 +19,10 @@ class Settings(BaseSettings):
 
     cors_origins: list[str] = ["http://localhost:3000"]
 
+    rate_limit_enabled: bool = True
+    rate_limit_requests: int = 100
+    rate_limit_window_seconds: float = 60.0
+
     vapid_public_key: str | None = None
     vapid_private_key: str | None = None
     vapid_subject: str | None = None

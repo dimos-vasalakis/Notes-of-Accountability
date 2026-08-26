@@ -9,7 +9,11 @@ from fastapi.responses import JSONResponse
 from app.api.routers import auth, notes, push_subscriptions, tasks
 from app.core.config import settings
 from app.core.exceptions import ConflictError, NotFoundError
+from app.core.logging import configure_logging
+from app.core.middleware import RateLimitMiddleware, RequestContextMiddleware
 from app.services.notification_service import send_due_task_notifications
+
+configure_logging()
 
 
 @asynccontextmanager
@@ -23,6 +27,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 app = FastAPI(title="Note of Accountability API", lifespan=lifespan)
 
+# Order matters: middleware runs outside-in in the order added, so CORS wraps
+# rate limiting wraps request logging (added last, so it sees every response).
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
@@ -30,6 +36,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(RateLimitMiddleware)
+app.add_middleware(RequestContextMiddleware)
 
 
 @app.exception_handler(NotFoundError)
