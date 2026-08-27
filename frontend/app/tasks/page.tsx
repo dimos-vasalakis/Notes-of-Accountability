@@ -160,11 +160,14 @@ export default function TasksPage() {
               Tomorrow 9am
             </button>
 
-            {newDueDate && (
+            <label className="ml-auto flex items-center gap-1.5 text-xs text-text-muted">
+              Reminder
               <select
                 value={reminderMinutes}
                 onChange={(e) => setReminderMinutes(e.target.value)}
-                className="ml-auto rounded-xl border border-border bg-bg-elevated px-2.5 py-1 text-xs text-text focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
+                disabled={!newDueDate}
+                title={newDueDate ? undefined : "Pick a due date first"}
+                className="rounded-xl border border-border bg-bg-elevated px-2.5 py-1 text-xs text-text focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {REMINDER_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -172,7 +175,7 @@ export default function TasksPage() {
                   </option>
                 ))}
               </select>
-            )}
+            </label>
           </div>
         </form>
       </Card>

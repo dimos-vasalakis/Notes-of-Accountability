@@ -34,9 +34,7 @@ export default function SignupPage() {
 
   return (
     <div className="mx-auto flex max-w-sm animate-fade-in flex-col items-center pt-8">
-      <span className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-accent font-display text-lg text-accent-contrast">
-        N
-      </span>
+      <img src="/logo-mark.png" alt="Note of Accountability" className="mb-4 h-11 w-11 rounded-xl" />
       <h1 className="text-2xl font-semibold">Create your account</h1>
       <p className="mb-8 mt-1 text-sm text-text-muted">Notes, tasks and focus timers in one place.</p>
       <Card className="w-full p-6">

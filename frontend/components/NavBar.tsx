@@ -32,9 +32,7 @@ export function NavBar() {
       <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3 sm:px-6">
         <div className="flex items-center gap-6">
           <Link href="/notes" className="flex items-center gap-2 font-display text-lg font-semibold">
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent text-sm text-accent-contrast">
-              N
-            </span>
+            <img src="/logo-mark.png" alt="" className="h-7 w-7 rounded-lg" />
             NoA
           </Link>
           <div className="hidden items-center gap-1 sm:flex">

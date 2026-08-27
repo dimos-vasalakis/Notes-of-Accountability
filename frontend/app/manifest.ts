@@ -7,7 +7,7 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "Notes, tasks and focus timers for staying disciplined.",
     start_url: "/",
     display: "standalone",
-    background_color: "#100e1a",
+    background_color: "#050407",
     theme_color: "#6d5ef0",
     icons: [
       { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
