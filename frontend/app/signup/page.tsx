@@ -14,6 +14,7 @@ export default function SignupPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isStudent, setIsStudent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -22,8 +23,12 @@ export default function SignupPage() {
     setError(null);
     setSubmitting(true);
     try {
-      await api.post<UserPublic>("/api/auth/signup", { email, password });
-      router.push("/notes");
+      await api.post<UserPublic>("/api/auth/signup", {
+        email,
+        password,
+        is_student: isStudent,
+      });
+      router.push("/");
       router.refresh();
     } catch (err) {
       setError(err instanceof ApiError && err.status === 409 ? "An account with this email already exists" : "Something went wrong");
@@ -54,6 +59,20 @@ export default function SignupPage() {
             required
             minLength={8}
           />
+          <label className="flex cursor-pointer items-start gap-2.5 rounded-xl border border-border bg-bg p-3 transition-colors hover:border-accent">
+            <input
+              type="checkbox"
+              checked={isStudent}
+              onChange={(e) => setIsStudent(e.target.checked)}
+              className="mt-0.5 h-4 w-4 accent-[var(--accent)]"
+            />
+            <span className="text-sm">
+              I&apos;m preparing for the Πανελλήνιες
+              <span className="mt-0.5 block text-xs text-text-muted">
+                Unlocks the exam countdown and subject-weighted study tracking.
+              </span>
+            </span>
+          </label>
           {error && <p className="text-sm text-danger">{error}</p>}
           <Button type="submit" disabled={submitting}>
             {submitting ? "Signing up..." : "Sign up"}

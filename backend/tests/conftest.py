@@ -1,4 +1,5 @@
 import asyncio
+import uuid
 from collections.abc import AsyncIterator
 
 import pytest
@@ -59,6 +60,16 @@ async def client(db_session: AsyncSession) -> AsyncIterator[AsyncClient]:
     # Secure-flagged cookies regardless of the developer's local
     # COOKIE_SECURE setting -- ASGITransport never actually uses TLS, so
     # this is just about satisfying the cookie jar's scheme check.
-    async with AsyncClient(transport=transport, base_url="https://test") as ac:
+    #
+    # A unique X-Real-IP per test gives each one its own RateLimitMiddleware
+    # bucket. The limiter is per-process and in-memory, so without this every
+    # test shares one 100-req/60s budget and later tests start getting 429s
+    # purely because earlier ones ran. The middleware still runs -- it's
+    # exercised directly in test_middleware.py.
+    async with AsyncClient(
+        transport=transport,
+        base_url="https://test",
+        headers={"x-real-ip": f"10.0.0.{uuid.uuid4().int % 256}-{uuid.uuid4()}"},
+    ) as ac:
         yield ac
     app.dependency_overrides.pop(get_db, None)

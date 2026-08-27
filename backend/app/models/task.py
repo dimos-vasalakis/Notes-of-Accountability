@@ -31,6 +31,9 @@ class Task(TimestampMixin, SQLModel, table=True):
         sa_type=SAEnum(TaskStatus, native_enum=False, length=20),
     )
     due_date: datetime | None = Field(default=None, sa_type=DateTime(timezone=True))
+    # Set when status transitions to DONE, cleared when it transitions away.
+    # `updated_at` can't serve this purpose: it changes on any edit.
+    completed_at: datetime | None = Field(default=None, sa_type=DateTime(timezone=True))
     notified_at: datetime | None = Field(default=None, sa_type=DateTime(timezone=True))
     reminder_minutes_before: int | None = Field(default=None)
     reminder_notified_at: datetime | None = Field(default=None, sa_type=DateTime(timezone=True))

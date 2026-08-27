@@ -10,6 +10,8 @@ const LINKS = [
   { href: "/notes", label: "Notes" },
   { href: "/tasks", label: "Tasks" },
   { href: "/timer", label: "Focus" },
+  { href: "/pods", label: "Pods" },
+  { href: "/exam-prep", label: "Exam", studentOnly: true },
 ];
 
 export function NavBar() {
@@ -21,6 +23,8 @@ export function NavBar() {
     return null;
   }
 
+  const links = LINKS.filter((link) => !link.studentOnly || user.is_student);
+
   async function handleLogout() {
     await api.post("/api/auth/logout");
     router.push("/login");
@@ -31,12 +35,12 @@ export function NavBar() {
     <nav className="sticky top-0 z-20 border-b border-border bg-bg/80 backdrop-blur-md">
       <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3 sm:px-6">
         <div className="flex items-center gap-6">
-          <Link href="/notes" className="flex items-center gap-2 font-display text-lg font-semibold">
+          <Link href="/" className="flex items-center gap-2 font-display text-lg font-semibold">
             <img src="/logo-mark.png" alt="" className="h-7 w-7 rounded-lg" />
             NoA
           </Link>
           <div className="hidden items-center gap-1 sm:flex">
-            {LINKS.map((link) => {
+            {links.map((link) => {
               const active = pathname?.startsWith(link.href);
               return (
                 <Link
@@ -65,7 +69,7 @@ export function NavBar() {
         </div>
       </div>
       <div className="flex items-center gap-1 border-t border-border px-4 py-2 sm:hidden">
-        {LINKS.map((link) => {
+        {links.map((link) => {
           const active = pathname?.startsWith(link.href);
           return (
             <Link

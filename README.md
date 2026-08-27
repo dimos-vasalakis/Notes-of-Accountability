@@ -1,6 +1,17 @@
 # Note of Accountability (NoA)
 
-A productivity & accountability system for high-performance students and engineers. NoA unifies markdown notes, task tracking, and automated due-task push notifications in one app.
+A productivity & accountability system for high-performance students and engineers. NoA unifies markdown notes, task tracking, focus timers, and automated push notifications in one app.
+
+## Features
+
+- **Notes & tasks** — markdown notes, task tracking with due dates and lead-time reminders
+- **Focus timer** — Pomodoro-style sessions, optionally tagged with a study subject
+- **Accountability pods** — small invite-code groups; everyone sees each member's daily streak, and the pod gets a push notification when someone goes quiet for 24h
+- **Student mode** — opt in at signup for Panhellenic (πανελλήνιες) exam tooling: a countdown to the exams and a subject-weighted view of whether your study hours match what each subject is worth
+
+### Streaks
+
+A day counts toward your streak if you completed at least one task **or** logged at least one study session that day (UTC). Days are computed server-side from `tasks.completed_at` and `study_sessions.occurred_at`, so a streak is consistent across devices and visible to your pod. Not having logged anything *yet today* does not break a streak — it only breaks after a full day passes with no activity.
 
 ## Tech Stack
 
@@ -14,12 +25,14 @@ A productivity & accountability system for high-performance students and enginee
 ```
 backend/
   app/
-    api/routers/     # FastAPI endpoints (auth, notes, tasks, push_subscriptions)
+    api/routers/     # FastAPI endpoints (auth, notes, tasks, pods,
+                     #   exam_prep, push_subscriptions)
     services/         # Business logic
     models/           # SQLModel ORM models
     schemas/          # Pydantic request/response schemas
     core/             # Config, db session, security, exceptions
   migrations/         # Alembic migrations
+  scripts/            # Operational scripts (exam subject/date seeding)
   tests/
 
 frontend/
@@ -95,12 +108,59 @@ alembic upgrade head                              # apply migrations
 alembic revision --autogenerate -m "description"  # create a new migration
 ```
 
+## Exam configuration (student mode)
+
+> ⚠️ **The seeded exam date and subject weight coefficients are placeholders and are not verified.**
+> Panhellenic coefficients and exam dates are set each year by ministry decision (ΦΕΚ) and differ
+> between years and between scientific fields (επιστημονικά πεδία). Verify them against the current
+> year's official decision before students plan around them.
+
+The subjects, their weight coefficients, and the exam date live in the database
+(`exam_subjects` / `exam_configs`) rather than in code, so they can be corrected each season
+without a code change. The initial rows are seeded by the `c1a7d3f90b21` migration.
+
+To edit them, change the constants at the top of `backend/scripts/seed_exam_config.py` and run:
+
+```bash
+make seed-exam
+# or: cd backend && python -m scripts.seed_exam_config
+```
+
+The script upserts by subject `code` and track, so it is safe to run repeatedly. A subject removed
+from the list is deactivated rather than deleted, keeping historical study sessions readable.
+
+Only the Group D track (Οικονομίας & Πληροφορικής) is seeded today: Νεοελληνική Γλώσσα και
+Λογοτεχνία, Μαθηματικά, ΑΕΠΠ, and Αρχές Οικονομικής Θεωρίας.
+
 ## Testing
 
 ```bash
 cd backend
 pytest
 ```
+
+Tests build their schema from model metadata, so they do not exercise the migration files.
+CI covers that separately by running `alembic upgrade head`, then `alembic check` (asserting the
+models still match the migrations), then a full `downgrade base` / `upgrade head` round trip.
+Run the same checks locally with:
+
+```bash
+cd backend
+alembic upgrade head && alembic check
+```
+
+## Continuous Integration
+
+`.github/workflows/ci.yml` runs three jobs: backend tests, the migration checks above, and a
+frontend typecheck + build. `.github/workflows/cd.yml` builds and pushes production images.
+
+Both workflows are currently **manual-trigger only** (`workflow_dispatch`); the push/pull_request
+triggers are commented out, and CD additionally needs the `REGISTRY`, `REGISTRY_USERNAME`, and
+`REGISTRY_PASSWORD` secrets before it will work.
+
+> Note: ESLint is not configured in this project (no config file and no `eslint` dependency), so
+> `npm run lint` drops into an interactive setup prompt and cannot pass in CI. CI runs
+> `npm run typecheck` instead. Configure ESLint to restore linting.
 
 ## Production
 

@@ -6,7 +6,7 @@ from app.core.config import settings
 from app.core.db import get_db
 from app.core.exceptions import NotFoundError, TooManyRequestsError
 from app.models.user import User
-from app.schemas.user import UserCreate, UserLogin, UserPublic
+from app.schemas.user import UserCreate, UserLogin, UserProfileUpdate, UserPublic
 from app.services import auth_service
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -118,3 +118,12 @@ async def logout_all(
 @router.get("/me", response_model=UserPublic)
 async def me(current_user: User = Depends(get_current_user)) -> User:
     return current_user
+
+
+@router.patch("/me", response_model=UserPublic)
+async def update_me(
+    data: UserProfileUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> User:
+    return await auth_service.update_profile(db, current_user, data)

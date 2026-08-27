@@ -11,7 +11,8 @@ from app.core.config import settings
 from app.core.exceptions import ConflictError, NotFoundError, TooManyRequestsError
 from app.models.refresh_token import RefreshToken
 from app.models.user import User
-from app.schemas.user import UserCreate
+from app.models.exam_prep import DEFAULT_EXAM_TRACK
+from app.schemas.user import UserCreate, UserProfileUpdate
 
 # In-memory per-account failed-login tracker: after MAX_FAILED_ATTEMPTS
 # failures for the same (normalized) email within WINDOW_SECONDS, further
@@ -72,8 +73,31 @@ async def register_user(db: AsyncSession, data: UserCreate) -> User:
     if existing is not None:
         raise ConflictError("A user with this email already exists")
 
-    user = User(email=data.email, hashed_password=security.hash_password(data.password))
+    user = User(
+        email=data.email,
+        hashed_password=security.hash_password(data.password),
+        is_student=data.is_student,
+        # Group D is the only seeded track today; make the default explicit
+        # rather than leaving student users with no track to query against.
+        exam_track=DEFAULT_EXAM_TRACK if data.is_student else None,
+        display_name=data.display_name,
+    )
     db.add(user)
+    await db.commit()
+    await db.refresh(user)
+    return user
+
+
+async def update_profile(
+    db: AsyncSession, user: User, data: UserProfileUpdate
+) -> User:
+    updates = data.model_dump(exclude_unset=True)
+    for field, value in updates.items():
+        setattr(user, field, value)
+    # `not` rather than `is None`: an empty track is as unusable as a missing
+    # one, and would otherwise leave the account with no subjects to query.
+    if user.is_student and not user.exam_track:
+        user.exam_track = DEFAULT_EXAM_TRACK
     await db.commit()
     await db.refresh(user)
     return user

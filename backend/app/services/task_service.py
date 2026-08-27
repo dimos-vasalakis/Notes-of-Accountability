@@ -1,4 +1,5 @@
 import uuid
+from datetime import UTC, datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
@@ -46,6 +47,11 @@ async def update_task(
 ) -> Task:
     task = await get_task(db, owner_id, task_id)
     updates = data.model_dump(exclude_unset=True)
+    # Stamp/clear completion so streaks have a reliable "done on day X" signal.
+    if "status" in updates and updates["status"] != task.status:
+        task.completed_at = (
+            datetime.now(UTC) if updates["status"] == TaskStatus.DONE else None
+        )
     if "due_date" in updates and updates["due_date"] != task.due_date:
         task.notified_at = None
         task.reminder_notified_at = None

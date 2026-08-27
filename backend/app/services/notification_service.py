@@ -12,12 +12,19 @@ from app.core.config import settings
 from app.core.db import async_session_maker
 from app.models.push_subscription import PushSubscription
 from app.models.task import Task, TaskStatus
-from app.services import push_subscription_service
+from app.services import pod_service, push_subscription_service
 
 logger = logging.getLogger(__name__)
 
-# Arbitrary fixed key: guards this job so only one worker/process runs it at a time.
+# Arbitrary fixed keys: guard each job so only one worker/process runs it at a
+# time. Distinct keys so the two jobs never block each other.
 _ADVISORY_LOCK_KEY = 928374839123
+_POD_NUDGE_LOCK_KEY = 514820397461
+
+# How long a pod member must be silent before their pod-mates are nudged, and
+# how long before the same member can trigger another nudge.
+POD_INACTIVITY_HOURS = 24
+POD_NUDGE_COOLDOWN_HOURS = 24
 
 
 async def send_due_task_notifications() -> None:
@@ -79,6 +86,59 @@ async def send_due_task_notifications() -> None:
                 )
                 if await _send_to_subscriptions(db, subscriptions, payload):
                     task.reminder_notified_at = now
+
+        await db.commit()
+
+
+async def send_pod_inactivity_nudges() -> None:
+    """Tell a pod when one of its members has gone quiet, so they can nudge them."""
+    if not settings.vapid_public_key or not settings.vapid_private_key:
+        return
+
+    async with async_session_maker() as db:
+        got_lock = await db.scalar(
+            text("SELECT pg_try_advisory_xact_lock(:key)"), {"key": _POD_NUDGE_LOCK_KEY}
+        )
+        if not got_lock:
+            return
+
+        now = datetime.now(UTC)
+        quiet = await pod_service.list_quiet_memberships(
+            db,
+            inactivity_threshold=now - timedelta(hours=POD_INACTIVITY_HOURS),
+            nudge_cooldown=now - timedelta(hours=POD_NUDGE_COOLDOWN_HOURS),
+        )
+
+        for membership, user in quiet:
+            recipient_ids = await pod_service.list_other_member_ids(
+                db, membership.pod_id, membership.user_id
+            )
+            if not recipient_ids:
+                # A pod of one has nobody to nudge; still stamp the membership
+                # so it doesn't get re-examined every tick.
+                membership.last_nudge_sent_at = now
+                continue
+
+            subscriptions_by_user = (
+                await push_subscription_service.list_subscriptions_for_users(
+                    db, recipient_ids
+                )
+            )
+            subscriptions = [
+                subscription
+                for user_id in recipient_ids
+                for subscription in subscriptions_by_user.get(user_id, [])
+            ]
+
+            name = pod_service.display_name_for(user)
+            payload = json.dumps(
+                {
+                    "title": "Pod check-in",
+                    "body": f"{name} has gone quiet for {POD_INACTIVITY_HOURS}h — nudge them!",
+                }
+            )
+            if await _send_to_subscriptions(db, subscriptions, payload):
+                membership.last_nudge_sent_at = now
 
         await db.commit()
 

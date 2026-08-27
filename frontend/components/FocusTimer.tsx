@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
+import type { ExamSubject } from "@/lib/types";
 import type { TimerDurations, TimerMode } from "@/lib/useFocusTimer";
 import { useFocusTimer } from "@/lib/useFocusTimer";
 import { Button } from "@/components/ui/Button";
@@ -28,15 +29,52 @@ function formatTime(seconds: number): string {
 const RADIUS = 90;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
-export function FocusTimer() {
-  const timer = useFocusTimer();
+export interface FocusTimerProps {
+  /** When provided, the timer shows a subject picker and tags each session. */
+  subjects?: ExamSubject[];
+  onFocusSessionComplete?: (subjectCode: string | null, durationSeconds: number) => void;
+}
+
+export function FocusTimer({ subjects, onFocusSessionComplete }: FocusTimerProps = {}) {
   const [showSettings, setShowSettings] = useState(false);
+  const [subjectCode, setSubjectCode] = useState<string>("");
+  // Read through a ref so the completion callback always sees the subject
+  // selected when the session ended, not the one bound on first render.
+  const subjectRef = useRef(subjectCode);
+  subjectRef.current = subjectCode;
+
+  const timer = useFocusTimer({
+    onFocusSessionComplete: onFocusSessionComplete
+      ? (durationSeconds) =>
+          onFocusSessionComplete(subjectRef.current || null, durationSeconds)
+      : undefined,
+  });
 
   const color = MODE_ACCENTS[timer.mode];
   const offset = CIRCUMFERENCE * (1 - timer.progress);
 
   return (
     <div className="flex flex-col items-center gap-6">
+      {subjects && subjects.length > 0 && (
+        <label className="flex w-full flex-col gap-1.5">
+          <span className="text-xs font-medium uppercase tracking-wide text-text-faint">
+            Studying
+          </span>
+          <select
+            value={subjectCode}
+            onChange={(e) => setSubjectCode(e.target.value)}
+            className="w-full rounded-xl border border-border bg-bg-elevated px-3.5 py-2.5 text-sm text-text transition-colors focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
+          >
+            <option value="">No subject</option>
+            {subjects.map((subject) => (
+              <option key={subject.code} value={subject.code}>
+                {subject.name_el}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+
       <div className="flex items-center gap-2 rounded-full border border-border bg-bg-elevated p-1">
         {(Object.keys(MODE_LABELS) as TimerMode[]).map((m) => (
           <button

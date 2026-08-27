@@ -48,6 +48,55 @@ jobs:
       - name: Run tests
         run: pytest -v
 
+  # Tests build their schema from model metadata (tests/conftest.py uses
+  # create_all), so they never exercise the migration files. This job does:
+  # it runs the real migrations and then asserts they still match the models.
+  migrations:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: noa
+          POSTGRES_PASSWORD: noa
+          POSTGRES_DB: noa_migrations
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U noa"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      DATABASE_URL: postgresql+asyncpg://noa:noa@localhost:5432/noa_migrations
+      SECRET_KEY: ci-test-secret-key
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: backend/pyproject.toml
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      - name: Apply migrations
+        run: alembic upgrade head
+
+      - name: Assert models match migrations
+        # Fails if a model changed without a matching migration.
+        run: alembic check
+
+      - name: Assert migrations are reversible
+        run: |
+          alembic downgrade base
+          alembic upgrade head
+
   frontend-build:
     runs-on: ubuntu-latest
     defaults:
@@ -65,8 +114,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Lint
-        run: npm run lint
+      # Not `npm run lint`: no ESLint config or dependency exists yet, so
+      # `next lint` drops into an interactive setup prompt and never passes
+      # in CI. Swap this back once ESLint is actually configured.
+      - name: Typecheck
+        run: npm run typecheck
 
       - name: Build
         run: npm run build

@@ -6,12 +6,15 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api.routers import auth, notes, push_subscriptions, tasks
+from app.api.routers import auth, exam_prep, notes, pods, push_subscriptions, tasks
 from app.core.config import settings
 from app.core.exceptions import ConflictError, NotFoundError
 from app.core.logging import configure_logging
 from app.core.middleware import RateLimitMiddleware, RequestContextMiddleware
-from app.services.notification_service import send_due_task_notifications
+from app.services.notification_service import (
+    send_due_task_notifications,
+    send_pod_inactivity_nudges,
+)
 
 configure_logging()
 
@@ -20,6 +23,8 @@ configure_logging()
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     scheduler = AsyncIOScheduler()
     scheduler.add_job(send_due_task_notifications, "interval", seconds=60)
+    # A 24h inactivity threshold doesn't need minute-level polling.
+    scheduler.add_job(send_pod_inactivity_nudges, "interval", minutes=30)
     scheduler.start()
     yield
     scheduler.shutdown()
@@ -54,6 +59,8 @@ app.include_router(auth.router)
 app.include_router(notes.router)
 app.include_router(tasks.router)
 app.include_router(push_subscriptions.router)
+app.include_router(exam_prep.router)
+app.include_router(pods.router)
 
 
 @app.get("/health")

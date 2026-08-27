@@ -57,8 +57,22 @@ def create_refresh_token(subject: str) -> str:
     )
 
 
+# Tolerance for clock skew between minting and validating a token. Without it,
+# a backward clock correction (NTP resync, a suspended VM catching up, or two
+# app instances a few seconds apart) puts a fresh token's `iat` in the future
+# and PyJWT raises ImmatureSignatureError -- surfacing as a spurious 401 that
+# logs the user out. 60s is the common default and is negligible against a
+# 45-minute access token.
+_CLOCK_SKEW_LEEWAY = timedelta(seconds=60)
+
+
 def decode_token(token: str) -> dict[str, Any]:
-    return jwt.decode(token, settings.secret_key, algorithms=[settings.jwt_algorithm])
+    return jwt.decode(
+        token,
+        settings.secret_key,
+        algorithms=[settings.jwt_algorithm],
+        leeway=_CLOCK_SKEW_LEEWAY,
+    )
 
 
 def hash_token(token: str) -> str:

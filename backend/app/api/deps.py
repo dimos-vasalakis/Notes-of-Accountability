@@ -39,3 +39,15 @@ async def get_current_user(
         raise credentials_exception
 
     return user
+
+
+async def require_student_mode(
+    current_user: User = Depends(get_current_user),
+) -> User:
+    """Gate exam-prep routes to users who opted into student mode."""
+    if not current_user.is_student:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Student mode is not enabled for this account",
+        )
+    return current_user

@@ -1,5 +1,5 @@
 .PHONY: help dev backend frontend install install-backend install-frontend \
-	migrate makemigration test lint build up down logs
+	migrate makemigration test seed-exam typecheck lint build up down logs
 
 help:
 	@echo "Available targets:"
@@ -9,6 +9,8 @@ help:
 	@echo "  migrate            Apply alembic migrations"
 	@echo "  makemigration m=\"msg\"  Create a new alembic migration"
 	@echo "  test               Run backend tests"
+	@echo "  seed-exam          Seed/refresh exam subjects, weights and exam date"
+	@echo "  typecheck          Typecheck the frontend"
 	@echo "  lint               Run frontend lint"
 	@echo "  build              Build frontend for production"
 	@echo "  up                 Start docker-compose stack"
@@ -37,6 +39,12 @@ makemigration:
 
 test:
 	cd backend && uv run pytest
+
+seed-exam:
+	cd backend && uv run python -m scripts.seed_exam_config
+
+typecheck:
+	cd frontend && npm run typecheck
 
 lint:
 	cd frontend && npm run lint

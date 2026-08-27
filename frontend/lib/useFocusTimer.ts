@@ -79,7 +79,17 @@ function playChime() {
   }
 }
 
-export function useFocusTimer() {
+export interface FocusTimerOptions {
+  /** Called when a focus session completes, with the elapsed focus duration. */
+  onFocusSessionComplete?: (durationSeconds: number) => void;
+}
+
+export function useFocusTimer(options: FocusTimerOptions = {}) {
+  // Held in a ref so a caller passing an inline arrow doesn't re-run the
+  // completion effect (which would double-log a session).
+  const onCompleteRef = useRef(options.onFocusSessionComplete);
+  onCompleteRef.current = options.onFocusSessionComplete;
+
   const [durations, setDurations] = useState<TimerDurations>(DEFAULT_DURATIONS);
   const [mode, setMode] = useState<TimerMode>("focus");
   const [secondsLeft, setSecondsLeft] = useState(DEFAULT_DURATIONS.focus);
@@ -164,6 +174,8 @@ export function useFocusTimer() {
         window.localStorage.setItem(STATS_KEY, JSON.stringify(next));
         return next;
       });
+
+      onCompleteRef.current?.(durations.focus);
 
       const isLongBreak = nextCount % SESSIONS_BEFORE_LONG_BREAK === 0;
       notify("Focus session complete", isLongBreak ? "Time for a long break." : "Time for a short break.");
