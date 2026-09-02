@@ -38,6 +38,7 @@ export function NavBar() {
           <Link href="/" className="flex items-center gap-2 font-display text-lg font-semibold">
             <img src="/logo-mark.png" alt="" className="h-7 w-7 rounded-lg" />
             NoA
+            <span className="text-xs font-normal text-text-faint">v2</span>
           </Link>
           <div className="hidden items-center gap-1 sm:flex">
             {links.map((link) => {
