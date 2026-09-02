@@ -32,6 +32,7 @@ services:
         condition: service_healthy
     volumes:
       - ./backend/app:/app/app
+      - ./backend/migrations:/app/migrations
     ports:
       - "8000:8000"
 
@@ -45,8 +46,12 @@ services:
     depends_on:
       - backend
     volumes:
-      - ./frontend/app:/app/app
+      # Whole source tree, so edits under components/ and lib/ hot-reload too.
+      # The anonymous volumes keep the image's node_modules and a container
+      # -local .next from being shadowed by the host's copies.
+      - ./frontend:/app
       - /app/node_modules
+      - /app/.next
     ports:
       - "3000:3000"
 
