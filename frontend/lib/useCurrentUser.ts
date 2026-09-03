@@ -34,5 +34,10 @@ export function useCurrentUser() {
     };
   }, []);
 
-  return { user, loading };
+  async function logout() {
+    await api.post("/api/auth/logout");
+    setUser(null);
+  }
+
+  return { user, loading, logout };
 }

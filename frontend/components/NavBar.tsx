@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useRef } from "react";
 
-import { api } from "@/lib/api";
 import { useCurrentUser } from "@/lib/useCurrentUser";
 
 const LINKS = [
@@ -15,18 +15,36 @@ const LINKS = [
 ];
 
 export function NavBar() {
-  const { user, loading } = useCurrentUser();
+  const { user, loading, logout } = useCurrentUser();
   const router = useRouter();
   const pathname = usePathname();
+
+  const initialPathname = useRef(pathname);
+  const hasNavigatedInApp = useRef(false);
+
+  useEffect(() => {
+    if (pathname !== initialPathname.current) {
+      hasNavigatedInApp.current = true;
+    }
+  }, [pathname]);
 
   if (loading || !user) {
     return null;
   }
 
   const links = LINKS.filter((link) => !link.studentOnly || user.is_student);
+  const canGoBack = !!pathname && pathname !== "/";
+
+  function handleBack() {
+    if (hasNavigatedInApp.current) {
+      router.back();
+    } else {
+      router.push("/");
+    }
+  }
 
   async function handleLogout() {
-    await api.post("/api/auth/logout");
+    await logout();
     router.push("/login");
     router.refresh();
   }
@@ -35,11 +53,33 @@ export function NavBar() {
     <nav className="sticky top-0 z-20 border-b border-border bg-bg/80 backdrop-blur-md">
       <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3 sm:px-6">
         <div className="flex items-center gap-6">
-          <Link href="/" className="flex items-center gap-2 font-display text-lg font-semibold">
-            <img src="/logo-mark.png" alt="" className="h-7 w-7 rounded-lg" />
-            NoA
-            <span className="text-xs font-normal text-text-faint">v2</span>
-          </Link>
+          <div className="flex items-center gap-2">
+            {canGoBack && (
+              <button
+                onClick={handleBack}
+                aria-label="Go back"
+                className="rounded-lg p-1.5 text-text-muted transition-colors hover:bg-accent-soft/60 hover:text-text"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="h-5 w-5"
+                >
+                  <path d="M15 18l-6-6 6-6" />
+                </svg>
+              </button>
+            )}
+            <Link href="/" className="flex items-center gap-2 font-display text-lg font-semibold">
+              <img src="/logo-mark.png" alt="" className="h-7 w-7 rounded-lg" />
+              NoA
+              <span className="text-xs font-normal text-text-faint">v2</span>
+            </Link>
+          </div>
           <div className="hidden items-center gap-1 sm:flex">
             {links.map((link) => {
               const active = pathname?.startsWith(link.href);
