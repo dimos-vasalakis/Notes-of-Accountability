@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { api, ApiError } from "@/lib/api";
+import { useAuth } from "@/lib/AuthContext";
 import type { UserPublic } from "@/lib/types";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -12,6 +13,7 @@ import { Input } from "@/components/ui/Input";
 
 export default function SignupPage() {
   const router = useRouter();
+  const { setUser } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isStudent, setIsStudent] = useState(false);
@@ -23,13 +25,13 @@ export default function SignupPage() {
     setError(null);
     setSubmitting(true);
     try {
-      await api.post<UserPublic>("/api/auth/signup", {
+      const user = await api.post<UserPublic>("/api/auth/signup", {
         email,
         password,
         is_student: isStudent,
       });
+      setUser(user);
       router.push("/");
-      router.refresh();
     } catch (err) {
       setError(err instanceof ApiError && err.status === 409 ? "An account with this email already exists" : "Something went wrong");
     } finally {

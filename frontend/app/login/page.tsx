@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { api, ApiError } from "@/lib/api";
+import { useAuth } from "@/lib/AuthContext";
 import type { UserPublic } from "@/lib/types";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -12,6 +13,7 @@ import { Input } from "@/components/ui/Input";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { setUser } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -22,9 +24,9 @@ export default function LoginPage() {
     setError(null);
     setSubmitting(true);
     try {
-      await api.post<UserPublic>("/api/auth/login", { email, password });
+      const user = await api.post<UserPublic>("/api/auth/login", { email, password });
+      setUser(user);
       router.push("/notes");
-      router.refresh();
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         setError("Invalid email or password");

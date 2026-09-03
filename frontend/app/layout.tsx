@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter, Space_Grotesk } from "next/font/google";
 
 import { NavBar } from "@/components/NavBar";
+import { AuthProvider } from "@/lib/AuthContext";
 
 import { EnableNotifications } from "./components/EnableNotifications";
 import { RegisterServiceWorker } from "./components/RegisterServiceWorker";
@@ -41,10 +42,12 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${spaceGrotesk.variable}`}>
       <body className="min-h-screen bg-bg text-text">
-        <RegisterServiceWorker />
-        <NavBar />
-        <EnableNotifications />
-        <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-10">{children}</main>
+        <AuthProvider>
+          <RegisterServiceWorker />
+          <NavBar />
+          <EnableNotifications />
+          <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-10">{children}</main>
+        </AuthProvider>
       </body>
     </html>
   );

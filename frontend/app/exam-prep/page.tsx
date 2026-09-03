@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { api } from "@/lib/api";
+import { useAuth } from "@/lib/AuthContext";
 import type { UserPublic } from "@/lib/types";
 import { useExamPrep, type AllocationWindow } from "@/lib/useExamPrep";
 import { useRequireAuth } from "@/lib/useRequireAuth";
@@ -109,6 +110,7 @@ export default function ExamPrepPage() {
 }
 
 function StudentModeUpsell({ onEnabled }: { onEnabled: () => void }) {
+  const { setUser } = useAuth();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -116,16 +118,12 @@ function StudentModeUpsell({ onEnabled }: { onEnabled: () => void }) {
     setSubmitting(true);
     setError(null);
     try {
-      await api.patch<UserPublic>("/api/auth/me", {
+      const updated = await api.patch<UserPublic>("/api/auth/me", {
         is_student: true,
         exam_track: "group_d",
       });
-      // Every component calls useCurrentUser independently, so there is no
-      // shared cache to invalidate -- NavBar would keep hiding the Exam link
-      // until a reload. A full reload is the honest fix for a once-per-account
-      // action; a shared user context would be the cleaner long-term one.
+      setUser(updated);
       onEnabled();
-      window.location.reload();
     } catch {
       setError("Could not enable student mode. Try again.");
       setSubmitting(false);
