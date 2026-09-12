@@ -23,6 +23,7 @@ _WINDOW_DAYS = {"week": 7, "month": 30}
 
 
 def _window_start(window: str) -> datetime:
+    """Convert a "week"/"month" window label into its starting timestamp."""
     return datetime.now(UTC) - timedelta(days=_WINDOW_DAYS[window])
 
 
@@ -31,6 +32,7 @@ async def get_config(
     current_user: User = Depends(require_student_mode),
     db: AsyncSession = Depends(get_db),
 ) -> ExamConfigRead:
+    """Return the exam config and days-remaining countdown for the user's track."""
     config = await exam_prep_service.get_exam_config(db, current_user.exam_track)
     return ExamConfigRead(
         track=config.track,
@@ -45,6 +47,7 @@ async def list_subjects(
     current_user: User = Depends(require_student_mode),
     db: AsyncSession = Depends(get_db),
 ) -> list[ExamSubjectRead]:
+    """List the exam subjects configured for the user's track."""
     return await exam_prep_service.list_subjects(db, current_user.exam_track)
 
 
@@ -60,6 +63,7 @@ async def create_study_session(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> StudySession:
+    """Log a completed focus/study session for the current user."""
     return await exam_prep_service.log_study_session(
         db, current_user.id, data, current_user.exam_track
     )
@@ -71,6 +75,7 @@ async def list_study_sessions(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> list[StudySession]:
+    """List the user's study sessions within the requested time window."""
     return await exam_prep_service.list_study_sessions(
         db, current_user.id, _window_start(window)
     )
@@ -82,6 +87,7 @@ async def get_allocation(
     current_user: User = Depends(require_student_mode),
     db: AsyncSession = Depends(get_db),
 ) -> list[SubjectAllocationRead]:
+    """Return time spent per subject within the requested window."""
     return await exam_prep_service.get_subject_allocation(
         db, current_user.id, current_user.exam_track, _window_start(window)
     )

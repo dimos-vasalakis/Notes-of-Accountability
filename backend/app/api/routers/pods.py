@@ -18,6 +18,7 @@ async def create_pod(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> PodRead:
+    """Create a new accountability pod owned by the current user."""
     return await pod_service.create_pod(db, current_user.id, data.name)
 
 
@@ -27,6 +28,7 @@ async def join_pod(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> PodRead:
+    """Join an existing pod using its invite code."""
     return await pod_service.join_pod(db, current_user.id, data.invite_code)
 
 
@@ -35,6 +37,7 @@ async def list_pods(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> list[PodRead]:
+    """List every pod the current user is a member of."""
     return await pod_service.list_my_pods(db, current_user.id)
 
 
@@ -44,6 +47,7 @@ async def my_streak(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> StreakRead:
+    """Return the current user's accountability streak."""
     return await pod_service.compute_streak(db, current_user.id)
 
 
@@ -53,6 +57,7 @@ async def get_pod_feed(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> PodFeedRead:
+    """Return recent activity for a pod the user belongs to."""
     return await pod_service.get_pod_feed(db, pod_id, current_user.id)
 
 
@@ -62,4 +67,5 @@ async def leave_pod(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> None:
+    """Remove the current user from a pod."""
     await pod_service.leave_pod(db, current_user.id, pod_id)

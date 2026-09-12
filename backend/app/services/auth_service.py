@@ -1,3 +1,5 @@
+"""Registration, authentication, and JWT session management for user accounts."""
+
 import time
 import uuid
 from collections import OrderedDict, deque
@@ -31,6 +33,7 @@ _failed_attempts: OrderedDict[str, deque[float]] = OrderedDict()
 
 
 def _check_and_record_lockout(email: str) -> None:
+    """Raise if this email has hit the failed-attempt lockout threshold."""
     now = time.monotonic()
     window_start = now - _WINDOW_SECONDS
 
@@ -53,6 +56,7 @@ def _check_and_record_lockout(email: str) -> None:
 
 
 def _record_failed_attempt(email: str) -> None:
+    """Track one more failed login for this email, evicting the oldest tracked email if full."""
     attempts = _failed_attempts.get(email)
     if attempts is None:
         attempts = deque()
@@ -65,10 +69,12 @@ def _record_failed_attempt(email: str) -> None:
 
 
 def _clear_failed_attempts(email: str) -> None:
+    """Reset the failed-login counter for this email after a successful login."""
     _failed_attempts.pop(email, None)
 
 
 async def register_user(db: AsyncSession, data: UserCreate) -> User:
+    """Create a new user account, rejecting duplicate emails."""
     existing = await db.scalar(select(User).where(User.email == data.email))
     if existing is not None:
         raise ConflictError("A user with this email already exists")
@@ -91,6 +97,7 @@ async def register_user(db: AsyncSession, data: UserCreate) -> User:
 async def update_profile(
     db: AsyncSession, user: User, data: UserProfileUpdate
 ) -> User:
+    """Apply a partial profile update, backfilling an exam track if needed."""
     updates = data.model_dump(exclude_unset=True)
     for field, value in updates.items():
         setattr(user, field, value)
@@ -104,6 +111,7 @@ async def update_profile(
 
 
 async def authenticate_user(db: AsyncSession, email: str, password: str) -> User | None:
+    """Verify credentials, enforcing lockout; returns None on any auth failure."""
     normalized_email = email.strip().lower()
     _check_and_record_lockout(normalized_email)
 
@@ -124,6 +132,7 @@ async def authenticate_user(db: AsyncSession, email: str, password: str) -> User
 
 
 async def issue_tokens(db: AsyncSession, user: User) -> tuple[str, str]:
+    """Mint a new access/refresh token pair and persist the refresh token's hash."""
     access_token = security.create_access_token(str(user.id))
     refresh_token = security.create_refresh_token(str(user.id))
 
@@ -140,6 +149,7 @@ async def issue_tokens(db: AsyncSession, user: User) -> tuple[str, str]:
 
 
 async def refresh_access_token(db: AsyncSession, refresh_token: str) -> tuple[str, str]:
+    """Rotate a valid refresh token into a new access/refresh pair."""
     try:
         payload = security.decode_token(refresh_token)
     except Exception as exc:
@@ -148,6 +158,7 @@ async def refresh_access_token(db: AsyncSession, refresh_token: str) -> tuple[st
     if payload.get("type") != "refresh":
         raise NotFoundError("Invalid refresh token")
 
+    # Refresh tokens are stored hashed, never in plaintext.
     token_hash = security.hash_token(refresh_token)
     stored = await db.scalar(
         select(RefreshToken).where(RefreshToken.token_hash == token_hash)
@@ -178,6 +189,7 @@ async def refresh_access_token(db: AsyncSession, refresh_token: str) -> tuple[st
 
 
 async def revoke_refresh_token(db: AsyncSession, refresh_token: str) -> None:
+    """Mark a single refresh token revoked, e.g. on logout."""
     token_hash = security.hash_token(refresh_token)
     stored = await db.scalar(
         select(RefreshToken).where(RefreshToken.token_hash == token_hash)
@@ -188,6 +200,7 @@ async def revoke_refresh_token(db: AsyncSession, refresh_token: str) -> None:
 
 
 async def revoke_all_refresh_tokens(db: AsyncSession, user_id: uuid.UUID) -> None:
+    """Revoke every active refresh token for a user, signing out all sessions."""
     result = await db.scalars(
         select(RefreshToken).where(
             RefreshToken.user_id == user_id, RefreshToken.revoked.is_(False)

@@ -1,3 +1,5 @@
+"""Manages web push subscriptions so notifications can be delivered to a user's devices."""
+
 import uuid
 from collections import defaultdict
 
@@ -12,6 +14,7 @@ from app.schemas.push_subscription import PushSubscriptionCreate
 async def create_or_update_subscription(
     db: AsyncSession, user_id: uuid.UUID, data: PushSubscriptionCreate
 ) -> PushSubscription:
+    """Upsert a push subscription, rotating keys if the endpoint is already known."""
     existing = await db.scalar(
         select(PushSubscription).where(
             PushSubscription.endpoint == data.endpoint,
@@ -25,6 +28,7 @@ async def create_or_update_subscription(
         await db.refresh(existing)
         return existing
 
+    # Endpoint may belong to a stale subscription from another user; clear it first.
     await db.execute(
         delete(PushSubscription).where(PushSubscription.endpoint == data.endpoint)
     )
@@ -42,6 +46,7 @@ async def create_or_update_subscription(
 
 
 async def delete_subscription(db: AsyncSession, user_id: uuid.UUID, endpoint: str) -> None:
+    """Remove a subscription by endpoint, scoped to its owning user."""
     subscription = await db.scalar(
         select(PushSubscription).where(
             PushSubscription.endpoint == endpoint, PushSubscription.user_id == user_id
@@ -55,6 +60,7 @@ async def delete_subscription(db: AsyncSession, user_id: uuid.UUID, endpoint: st
 async def list_subscriptions_for_user(
     db: AsyncSession, user_id: uuid.UUID
 ) -> list[PushSubscription]:
+    """Return every push subscription registered for a single user."""
     result = await db.scalars(
         select(PushSubscription).where(PushSubscription.user_id == user_id)
     )
@@ -64,6 +70,7 @@ async def list_subscriptions_for_user(
 async def list_subscriptions_for_users(
     db: AsyncSession, user_ids: list[uuid.UUID]
 ) -> dict[uuid.UUID, list[PushSubscription]]:
+    """Batch-fetch subscriptions for multiple users, grouped by user id."""
     if not user_ids:
         return {}
 

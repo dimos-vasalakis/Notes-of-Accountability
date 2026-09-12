@@ -19,6 +19,7 @@ async def create_task(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> Task:
+    """Create a new task for the authenticated user."""
     return await task_service.create_task(db, current_user.id, data)
 
 
@@ -28,6 +29,7 @@ async def list_tasks(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> list[Task]:
+    """List the user's tasks, optionally filtered by status."""
     return await task_service.list_tasks(db, current_user.id, status_filter)
 
 
@@ -37,6 +39,7 @@ async def get_task(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> Task:
+    """Fetch a single task by id, scoped to its owner."""
     return await task_service.get_task(db, current_user.id, task_id)
 
 
@@ -47,6 +50,7 @@ async def update_task(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> Task:
+    """Apply a partial update to an existing task."""
     return await task_service.update_task(db, current_user.id, task_id, data)
 
 
@@ -56,4 +60,5 @@ async def delete_task(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> None:
+    """Delete a task owned by the authenticated user."""
     await task_service.delete_task(db, current_user.id, task_id)

@@ -1,3 +1,5 @@
+"""Scheduled jobs that push web notifications for due tasks and quiet pod members."""
+
 import asyncio
 import json
 import logging
@@ -28,10 +30,12 @@ POD_NUDGE_COOLDOWN_HOURS = 24
 
 
 async def send_due_task_notifications() -> None:
+    """Push a notification for each task that's now due or within its reminder lead time."""
     if not settings.vapid_public_key or not settings.vapid_private_key:
         return
 
     async with async_session_maker() as db:
+        # Advisory lock keeps this job from running twice if the scheduler overlaps.
         got_lock = await db.scalar(text("SELECT pg_try_advisory_xact_lock(:key)"), {"key": _ADVISORY_LOCK_KEY})
         if not got_lock:
             return

@@ -21,6 +21,7 @@ async def create_subscription(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> PushSubscription:
+    """Register (or refresh) a browser push subscription for the current user."""
     return await push_subscription_service.create_or_update_subscription(
         db, current_user.id, data
     )
@@ -32,4 +33,5 @@ async def delete_subscription(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> None:
+    """Unregister a push subscription by its endpoint URL."""
     await push_subscription_service.delete_subscription(db, current_user.id, data.endpoint)

@@ -1,3 +1,5 @@
+"""Accountability pods: membership, invite codes, activity streaks, and the pod feed."""
+
 import secrets
 import uuid
 from datetime import UTC, date, datetime, timedelta
@@ -60,6 +62,7 @@ async def _activity_timestamps(
 def _streak_from_timestamps(
     timestamps: list[datetime], as_of: date
 ) -> tuple[int, bool, datetime | None]:
+    """Derive (current_streak, active_today, last_active_at) from raw activity timestamps."""
     if not timestamps:
         return 0, False, None
 
@@ -96,6 +99,7 @@ async def compute_streaks(
 async def compute_streak(
     db: AsyncSession, user_id: uuid.UUID, as_of: date | None = None
 ) -> StreakRead:
+    """Compute a single user's current activity streak."""
     streaks = await compute_streaks(db, [user_id], as_of)
     current_streak, active_today, last_active_at = streaks[user_id]
     return StreakRead(
@@ -106,6 +110,7 @@ async def compute_streak(
 
 
 async def _generate_invite_code(db: AsyncSession) -> str:
+    """Generate a unique invite code, retrying on collision."""
     for _ in range(_INVITE_CODE_MAX_ATTEMPTS):
         code = secrets.token_hex(4).upper()
         exists = await db.scalar(select(Pod.id).where(Pod.invite_code == code))
@@ -115,12 +120,14 @@ async def _generate_invite_code(db: AsyncSession) -> str:
 
 
 async def _member_count(db: AsyncSession, pod_id: uuid.UUID) -> int:
+    """Count active members of a pod."""
     return await db.scalar(
         select(func.count()).select_from(PodMembership).where(PodMembership.pod_id == pod_id)
     )
 
 
 async def _to_pod_read(db: AsyncSession, pod: Pod) -> PodRead:
+    """Serialize a Pod model into its API representation, including member count."""
     return PodRead(
         id=pod.id,
         name=pod.name,
@@ -132,6 +139,7 @@ async def _to_pod_read(db: AsyncSession, pod: Pod) -> PodRead:
 
 
 async def create_pod(db: AsyncSession, owner_id: uuid.UUID, name: str) -> PodRead:
+    """Create a new pod and enroll its owner as the first member."""
     pod = Pod(name=name, owner_id=owner_id, invite_code=await _generate_invite_code(db))
     db.add(pod)
     await db.flush()
@@ -142,6 +150,7 @@ async def create_pod(db: AsyncSession, owner_id: uuid.UUID, name: str) -> PodRea
 
 
 async def join_pod(db: AsyncSession, user_id: uuid.UUID, invite_code: str) -> PodRead:
+    """Enroll a user into a pod by its invite code."""
     pod = await db.scalar(
         select(Pod).where(Pod.invite_code == invite_code.strip().upper())
     )
@@ -159,6 +168,7 @@ async def join_pod(db: AsyncSession, user_id: uuid.UUID, invite_code: str) -> Po
 
 
 async def list_my_pods(db: AsyncSession, user_id: uuid.UUID) -> list[PodRead]:
+    """List every pod a user belongs to, oldest first."""
     pods = list(
         await db.scalars(
             select(Pod)
@@ -173,6 +183,7 @@ async def list_my_pods(db: AsyncSession, user_id: uuid.UUID) -> list[PodRead]:
 async def get_pod_membership_or_404(
     db: AsyncSession, pod_id: uuid.UUID, user_id: uuid.UUID
 ) -> PodMembership:
+    """Fetch a user's membership in a pod, raising if they aren't a member."""
     membership = await db.scalar(
         select(PodMembership).where(
             PodMembership.pod_id == pod_id, PodMembership.user_id == user_id
@@ -186,6 +197,7 @@ async def get_pod_membership_or_404(
 async def get_pod_feed(
     db: AsyncSession, pod_id: uuid.UUID, user_id: uuid.UUID
 ) -> PodFeedRead:
+    """Build the pod's activity feed, ranked by streak and today's activity."""
     await get_pod_membership_or_404(db, pod_id, user_id)
     pod = await db.get(Pod, pod_id)
 
@@ -215,6 +227,7 @@ async def get_pod_feed(
 
 
 async def leave_pod(db: AsyncSession, user_id: uuid.UUID, pod_id: uuid.UUID) -> None:
+    """Remove a user's membership from a pod."""
     membership = await get_pod_membership_or_404(db, pod_id, user_id)
     await db.delete(membership)
     await db.commit()
@@ -258,6 +271,7 @@ async def list_quiet_memberships(
 async def list_other_member_ids(
     db: AsyncSession, pod_id: uuid.UUID, exclude_user_id: uuid.UUID
 ) -> list[uuid.UUID]:
+    """List member ids of a pod, excluding one member (typically the notification's subject)."""
     result = await db.scalars(
         select(PodMembership.user_id).where(
             PodMembership.pod_id == pod_id, PodMembership.user_id != exclude_user_id

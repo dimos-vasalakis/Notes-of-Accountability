@@ -19,6 +19,7 @@ async def create_note(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> Note:
+    """Create a new markdown note for the authenticated user."""
     return await note_service.create_note(db, current_user.id, data)
 
 
@@ -27,6 +28,7 @@ async def list_notes(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> list[Note]:
+    """List all notes belonging to the authenticated user."""
     return await note_service.list_notes(db, current_user.id)
 
 
@@ -36,6 +38,7 @@ async def get_note(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> Note:
+    """Fetch a single note by id, scoped to its owner."""
     return await note_service.get_note(db, current_user.id, note_id)
 
 
@@ -46,6 +49,7 @@ async def update_note(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> Note:
+    """Apply a partial update to an existing note."""
     return await note_service.update_note(db, current_user.id, note_id, data)
 
 
@@ -55,4 +59,5 @@ async def delete_note(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> None:
+    """Delete a note owned by the authenticated user."""
     await note_service.delete_note(db, current_user.id, note_id)

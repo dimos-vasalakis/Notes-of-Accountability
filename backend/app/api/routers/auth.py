@@ -16,6 +16,7 @@ REFRESH_COOKIE = "refresh_token"
 
 
 def _set_auth_cookies(response: Response, access_token: str, refresh_token: str) -> None:
+    """Attach the access and refresh JWTs to the response as httponly cookies."""
     secure = settings.cookie_secure if settings.cookie_secure is not None else settings.environment != "development"
     samesite = settings.cookie_samesite
     response.set_cookie(
@@ -39,6 +40,7 @@ def _set_auth_cookies(response: Response, access_token: str, refresh_token: str)
 
 
 def _clear_auth_cookies(response: Response) -> None:
+    """Remove the access and refresh cookies, effectively signing the client out."""
     response.delete_cookie(ACCESS_COOKIE, path="/")
     response.delete_cookie(REFRESH_COOKIE, path="/")
 
@@ -47,6 +49,7 @@ def _clear_auth_cookies(response: Response) -> None:
 async def signup(
     data: UserCreate, response: Response, db: AsyncSession = Depends(get_db)
 ) -> User:
+    """Register a new account and log the user in immediately."""
     user = await auth_service.register_user(db, data)
     access_token, refresh_token = await auth_service.issue_tokens(db, user)
     _set_auth_cookies(response, access_token, refresh_token)
@@ -57,9 +60,11 @@ async def signup(
 async def login(
     data: UserLogin, response: Response, db: AsyncSession = Depends(get_db)
 ) -> User:
+    """Authenticate by email/password and issue fresh session cookies."""
     try:
         user = await auth_service.authenticate_user(db, data.email, data.password)
     except TooManyRequestsError as exc:
+        # Too many failed attempts for this account; surface the cooldown to the client.
         raise HTTPException(
             status.HTTP_429_TOO_MANY_REQUESTS,
             str(exc),
@@ -80,6 +85,7 @@ async def refresh(
     refresh_token: str | None = Cookie(default=None),
     db: AsyncSession = Depends(get_db),
 ) -> None:
+    """Exchange a valid refresh token for a new access/refresh pair."""
     if refresh_token is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Missing refresh token")
 
@@ -99,6 +105,7 @@ async def logout(
     refresh_token: str | None = Cookie(default=None),
     db: AsyncSession = Depends(get_db),
 ) -> None:
+    """Revoke the current refresh token and clear session cookies."""
     if refresh_token is not None:
         await auth_service.revoke_refresh_token(db, refresh_token)
     _clear_auth_cookies(response)
@@ -117,6 +124,7 @@ async def logout_all(
 
 @router.get("/me", response_model=UserPublic)
 async def me(current_user: User = Depends(get_current_user)) -> User:
+    """Return the authenticated user's profile."""
     return current_user
 
 
@@ -126,4 +134,5 @@ async def update_me(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> User:
+    """Update the authenticated user's profile fields."""
     return await auth_service.update_profile(db, current_user, data)

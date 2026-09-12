@@ -1,3 +1,5 @@
+"""CRUD operations for tasks, including the bookkeeping around completion and reminders."""
+
 import uuid
 from datetime import UTC, datetime
 
@@ -10,6 +12,7 @@ from app.schemas.task import TaskCreate, TaskUpdate
 
 
 async def create_task(db: AsyncSession, owner_id: uuid.UUID, data: TaskCreate) -> Task:
+    """Create a new task owned by the given user."""
     task = Task(
         owner_id=owner_id,
         title=data.title,
@@ -26,6 +29,7 @@ async def create_task(db: AsyncSession, owner_id: uuid.UUID, data: TaskCreate) -
 async def list_tasks(
     db: AsyncSession, owner_id: uuid.UUID, status: TaskStatus | None = None
 ) -> list[Task]:
+    """List a user's tasks, optionally narrowed to a single status."""
     query = select(Task).where(Task.owner_id == owner_id)
     if status is not None:
         query = query.where(Task.status == status)
@@ -34,6 +38,7 @@ async def list_tasks(
 
 
 async def get_task(db: AsyncSession, owner_id: uuid.UUID, task_id: uuid.UUID) -> Task:
+    """Fetch a single task by id, raising if it doesn't exist or isn't owned by the user."""
     task = await db.scalar(
         select(Task).where(Task.id == task_id, Task.owner_id == owner_id)
     )
@@ -45,6 +50,7 @@ async def get_task(db: AsyncSession, owner_id: uuid.UUID, task_id: uuid.UUID) ->
 async def update_task(
     db: AsyncSession, owner_id: uuid.UUID, task_id: uuid.UUID, data: TaskUpdate
 ) -> Task:
+    """Apply a partial update to a task, resetting reminder/completion state as needed."""
     task = await get_task(db, owner_id, task_id)
     updates = data.model_dump(exclude_unset=True)
     # Stamp/clear completion so streaks have a reliable "done on day X" signal.
@@ -68,6 +74,7 @@ async def update_task(
 
 
 async def delete_task(db: AsyncSession, owner_id: uuid.UUID, task_id: uuid.UUID) -> None:
+    """Delete a task owned by the given user."""
     task = await get_task(db, owner_id, task_id)
     await db.delete(task)
     await db.commit()

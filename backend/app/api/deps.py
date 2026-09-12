@@ -13,6 +13,7 @@ async def get_current_user(
     db: AsyncSession = Depends(get_db),
     access_token: str | None = Cookie(default=None),
 ) -> User:
+    """Resolve the authenticated user from the access-token cookie."""
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -21,6 +22,7 @@ async def get_current_user(
     if access_token is None:
         raise credentials_exception
 
+    # Decode and validate the JWT itself.
     try:
         payload = security.decode_token(access_token)
     except jwt.PyJWTError as exc:
@@ -29,11 +31,13 @@ async def get_current_user(
     if payload.get("type") != "access":
         raise credentials_exception
 
+    # Extract and validate the subject claim.
     try:
         user_id = uuid.UUID(payload.get("sub"))
     except (TypeError, ValueError) as exc:
         raise credentials_exception from exc
 
+    # Confirm the user still exists.
     user = await db.get(User, user_id)
     if user is None:
         raise credentials_exception

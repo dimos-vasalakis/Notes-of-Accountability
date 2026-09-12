@@ -1,3 +1,5 @@
+"""Exam-track configuration, subject lists, and study-session tracking for student mode."""
+
 import uuid
 from datetime import UTC, date, datetime
 
@@ -11,6 +13,7 @@ from app.schemas.exam_prep import StudySessionCreate, SubjectAllocationRead
 
 
 async def get_exam_config(db: AsyncSession, track: str) -> ExamConfig:
+    """Fetch the active exam configuration for a track."""
     config = await db.scalar(
         select(ExamConfig).where(
             ExamConfig.track == track, ExamConfig.is_active.is_(True)
@@ -27,6 +30,7 @@ def days_remaining(config: ExamConfig, as_of: date | None = None) -> int:
 
 
 async def list_subjects(db: AsyncSession, track: str) -> list[ExamSubject]:
+    """List the active subjects for a track, in display order."""
     result = await db.scalars(
         select(ExamSubject)
         .where(ExamSubject.track == track, ExamSubject.is_active.is_(True))
@@ -73,6 +77,7 @@ async def log_study_session(
 async def list_study_sessions(
     db: AsyncSession, owner_id: uuid.UUID, since: datetime
 ) -> list[StudySession]:
+    """List a user's study sessions since a given timestamp, most recent first."""
     result = await db.scalars(
         select(StudySession)
         .where(StudySession.owner_id == owner_id, StudySession.occurred_at >= since)
