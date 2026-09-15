@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.api.routers import auth, exam_prep, notes, pods, push_subscriptions, tasks
+from app.core import cache
 from app.core.config import settings
 from app.core.exceptions import ConflictError, NotFoundError
 from app.core.logging import configure_logging
@@ -28,6 +29,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     scheduler.start()
     yield
     scheduler.shutdown()
+    await cache.close()
 
 
 app = FastAPI(title="Note of Accountability API", lifespan=lifespan)

@@ -28,7 +28,7 @@ async def list_tasks(
     status_filter: TaskStatus | None = Query(default=None, alias="status"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-) -> list[Task]:
+) -> list[TaskRead]:
     """List the user's tasks, optionally filtered by status."""
     return await task_service.list_tasks(db, current_user.id, status_filter)
 
@@ -38,7 +38,7 @@ async def get_task(
     task_id: uuid.UUID,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-) -> Task:
+) -> TaskRead:
     """Fetch a single task by id, scoped to its owner."""
     return await task_service.get_task(db, current_user.id, task_id)
 

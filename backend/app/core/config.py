@@ -30,5 +30,11 @@ class Settings(BaseSettings):
     cookie_samesite: str = "lax"
     cookie_secure: bool | None = None
 
+    # TCP connection string for Upstash (or any) Redis, e.g.
+    # rediss://default:<password>@<endpoint>.upstash.io:6379
+    # Optional: caching degrades to "always hit the database" when unset.
+    redis_url: str | None = None
+    cache_ttl_seconds: int = 300
+
 
 settings = Settings()

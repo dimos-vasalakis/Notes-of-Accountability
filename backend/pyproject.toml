@@ -17,6 +17,7 @@ dependencies = [
     "bcrypt>=4.2",
     "apscheduler>=3.10",
     "pywebpush>=2.0",
+    "redis>=5.0",
 ]
 
 [project.optional-dependencies]
