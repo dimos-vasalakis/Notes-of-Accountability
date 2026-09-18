@@ -34,13 +34,23 @@ export const viewport: Viewport = {
   themeColor: "#6d5ef0",
 };
 
+// Runs before first paint so a saved bright theme doesn't flash the default one.
+const THEME_INIT_SCRIPT = `try{if(localStorage.getItem("noa-theme")==="bright")document.documentElement.dataset.theme="bright"}catch(e){}`;
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} ${spaceGrotesk.variable}`}>
+    <html
+      lang="en"
+      className={`${inter.variable} ${spaceGrotesk.variable}`}
+      suppressHydrationWarning
+    >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
       <body className="min-h-screen bg-bg text-text">
         <AuthProvider>
           <RegisterServiceWorker />

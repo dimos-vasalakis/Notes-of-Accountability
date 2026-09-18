@@ -74,6 +74,35 @@
   }
 }
 
+:root[data-theme="bright"] {
+  color-scheme: light;
+
+  --bg: #ffffff;
+  --bg-elevated: #ffffff;
+  --border: #e6e0fb;
+  --text: #1e1638;
+  --text-muted: #5b5378;
+  --text-faint: #9a92b8;
+
+  --accent: #7c3aed;
+  --accent-hover: #6d28d9;
+  --accent-soft: #f3ecff;
+  --accent-contrast: #ffffff;
+
+  --success: #1f9d6e;
+  --success-soft: #e4f6ee;
+  --danger: #d64545;
+  --danger-soft: #fbe9e9;
+  --warning: #d98c2b;
+  --warning-soft: #fdf1e2;
+
+  --ring: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+:root[data-theme="bright"] body {
+  background: #ffffff;
+}
+
 * {
   border-color: var(--border);
 }
