@@ -27,16 +27,16 @@
 :root {
   color-scheme: light dark;
 
-  --bg: #faf9f6;
+  --bg: #f6f5ff;
   --bg-elevated: #ffffff;
-  --border: #e7e3db;
+  --border: #e3e0f7;
   --text: #1c1a17;
-  --text-muted: #6b6459;
+  --text-muted: #5e5878;
   --text-faint: #a39c8e;
 
-  --accent: #6d5ef0;
+  --accent: #6c5ce7;
   --accent-hover: #5b4bdb;
-  --accent-soft: #efeafd;
+  --accent-soft: #ebe7ff;
   --accent-contrast: #ffffff;
 
   --success: #1f9d6e;
@@ -80,7 +80,7 @@
 
 body {
   margin: 0;
-  background: var(--bg);
+  background: radial-gradient(ellipse at top, color-mix(in srgb, var(--accent) 14%, var(--bg)) 0%, var(--bg) 55%) fixed;
   color: var(--text);
   font-family: var(--font-body), system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;

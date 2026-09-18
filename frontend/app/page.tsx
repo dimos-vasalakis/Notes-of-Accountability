@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 
 import { api } from "@/lib/api";
 import type { PodFeed } from "@/lib/types";
@@ -10,6 +9,7 @@ import { useCurrentUser } from "@/lib/useCurrentUser";
 import { useExamPrep } from "@/lib/useExamPrep";
 import { useMyStreak } from "@/lib/useMyStreak";
 import { usePods } from "@/lib/usePods";
+import { Landing } from "@/components/Landing";
 import { ExamCountdownCard } from "@/components/ExamCountdownCard";
 import { PodFeedCard } from "@/components/PodFeedCard";
 import { StreakBadge } from "@/components/StreakBadge";
@@ -24,19 +24,14 @@ const QUICK_LINKS = [
 
 export default function Home() {
   const { user, loading } = useCurrentUser();
-  const router = useRouter();
 
-  useEffect(() => {
-    if (!loading && !user) router.replace("/login");
-  }, [loading, user, router]);
-
-  // Gated on `user` so a logged-out visitor does not fire two 401s
-  // before the redirect to /login lands.
+  // Gated on `user` so a logged-out visitor does not fire two 401s.
   const { streak } = useMyStreak(Boolean(user));
   const { pods } = usePods(Boolean(user));
   const { config } = useExamPrep(Boolean(user?.is_student));
 
-  if (loading || !user) return null;
+  if (loading) return null;
+  if (!user) return <Landing />;
 
   const primaryPod = pods[0] ?? null;
   const greeting = user.display_name ?? user.email.split("@")[0];
