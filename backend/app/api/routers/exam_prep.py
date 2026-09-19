@@ -1,4 +1,3 @@
-from datetime import UTC, datetime, timedelta
 from typing import Literal
 
 from fastapi import APIRouter, Depends, Query, status
@@ -19,13 +18,6 @@ from app.services import exam_prep_service
 
 router = APIRouter(prefix="/api/exam-prep", tags=["exam-prep"])
 
-_WINDOW_DAYS = {"week": 7, "month": 30}
-
-
-def _window_start(window: str) -> datetime:
-    """Convert a "week"/"month" window label into its starting timestamp."""
-    return datetime.now(UTC) - timedelta(days=_WINDOW_DAYS[window])
-
 
 @router.get("/config", response_model=ExamConfigRead)
 async def get_config(
@@ -33,13 +25,7 @@ async def get_config(
     db: AsyncSession = Depends(get_db),
 ) -> ExamConfigRead:
     """Return the exam config and days-remaining countdown for the user's track."""
-    config = await exam_prep_service.get_exam_config(db, current_user.exam_track)
-    return ExamConfigRead(
-        track=config.track,
-        academic_year=config.academic_year,
-        exam_date=config.exam_date,
-        days_remaining=exam_prep_service.days_remaining(config),
-    )
+    return await exam_prep_service.get_exam_config(db, current_user.exam_track)
 
 
 @router.get("/subjects", response_model=list[ExamSubjectRead])
@@ -74,11 +60,9 @@ async def list_study_sessions(
     window: Literal["week", "month"] = Query(default="week"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-) -> list[StudySession]:
+) -> list[StudySessionRead]:
     """List the user's study sessions within the requested time window."""
-    return await exam_prep_service.list_study_sessions(
-        db, current_user.id, _window_start(window)
-    )
+    return await exam_prep_service.list_study_sessions(db, current_user.id, window)
 
 
 @router.get("/allocation", response_model=list[SubjectAllocationRead])
@@ -89,5 +73,5 @@ async def get_allocation(
 ) -> list[SubjectAllocationRead]:
     """Return time spent per subject within the requested window."""
     return await exam_prep_service.get_subject_allocation(
-        db, current_user.id, current_user.exam_track, _window_start(window)
+        db, current_user.id, current_user.exam_track, window
     )

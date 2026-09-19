@@ -15,8 +15,10 @@ from datetime import date
 
 from sqlmodel import select
 
+from app.core import cache
 from app.core.db import async_session_maker
 from app.models.exam_prep import ExamConfig, ExamSubject
+from app.services.exam_prep_service import invalidate_exam_reference_cache
 
 # --- EDIT THESE EACH EXAM SEASON ------------------------------------------
 TRACK = "group_d"  # Ομάδα Προσανατολισμού Οικονομίας & Πληροφορικής
@@ -70,6 +72,10 @@ async def seed() -> None:
         config.is_active = True
 
         await db.commit()
+
+    # Drop cached copies of the old config/subjects so the API serves the new ones now.
+    await invalidate_exam_reference_cache(TRACK)
+    await cache.close()
 
     print(f"Seeded {len(SUBJECTS)} subjects and the exam config for track '{TRACK}'.")
 

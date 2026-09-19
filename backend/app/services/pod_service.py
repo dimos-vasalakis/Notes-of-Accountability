@@ -9,6 +9,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
+from app.core.cache import STUDY_SCOPE, TASKS_SCOPE, get_versions, mget_json, mset_json
 from app.core.exceptions import ConflictError, NotFoundError
 from app.models.exam_prep import StudySession
 from app.models.pod import Pod, PodMembership
@@ -81,19 +82,56 @@ def _streak_from_timestamps(
     return streak, active_today, last_active_at
 
 
+def _streak_cache_key(user_id: uuid.UUID, as_of: date, versions: tuple[int, ...]) -> str:
+    # Dated, so a cached streak never outlives the day it was computed for.
+    return f"streak:{user_id}:{as_of.isoformat()}:v{'.'.join(map(str, versions))}"
+
+
 async def compute_streaks(
     db: AsyncSession, user_ids: list[uuid.UUID], as_of: date | None = None
 ) -> dict[uuid.UUID, tuple[int, bool, datetime | None]]:
-    """Batch streak computation shared by the pod feed and the nudge job."""
+    """Batch streak computation shared by the pod feed and the nudge job.
+
+    Cache-aside per user. Streaks derive from completed tasks and study
+    sessions, so each entry is keyed on both of that user's versions and any
+    task/study write orphans it. Only cache misses hit the database.
+    """
     as_of = as_of or datetime.now(UTC).date()
+    versions = await get_versions((TASKS_SCOPE, STUDY_SCOPE), list(user_ids))
+    keys = {user_id: _streak_cache_key(user_id, as_of, versions[user_id]) for user_id in user_ids}
+    cached = await mget_json(list(keys.values()))
+
+    result: dict[uuid.UUID, tuple[int, bool, datetime | None]] = {}
+    missing: list[uuid.UUID] = []
+    for user_id, raw in zip(keys, cached):
+        if raw is None:
+            missing.append(user_id)
+        else:
+            streak, active_today, last_active_at = raw
+            result[user_id] = (
+                streak,
+                active_today,
+                datetime.fromisoformat(last_active_at) if last_active_at else None,
+            )
+    if not missing:
+        return result
+
     since = datetime.combine(
         as_of - timedelta(days=_MAX_STREAK_LOOKBACK_DAYS), datetime.min.time(), tzinfo=UTC
     )
-    activity = await _activity_timestamps(db, user_ids, since)
-    return {
-        user_id: _streak_from_timestamps(timestamps, as_of)
-        for user_id, timestamps in activity.items()
-    }
+    activity = await _activity_timestamps(db, missing, since)
+    to_cache: dict[str, list[object]] = {}
+    for user_id, timestamps in activity.items():
+        computed = _streak_from_timestamps(timestamps, as_of)
+        result[user_id] = computed
+        streak, active_today, last_active_at = computed
+        to_cache[keys[user_id]] = [
+            streak,
+            active_today,
+            last_active_at.isoformat() if last_active_at else None,
+        ]
+    await mset_json(to_cache)
+    return result
 
 
 async def compute_streak(

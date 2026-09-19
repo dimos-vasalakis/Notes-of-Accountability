@@ -10,6 +10,7 @@ database" rather than taking the API down.
 import asyncio
 import json
 import logging
+import uuid
 from typing import Any
 
 import redis.asyncio as redis
@@ -17,6 +18,12 @@ import redis.asyncio as redis
 from app.core.config import settings
 
 logger = logging.getLogger("app.cache")
+
+# Invalidation scopes (see "versioned invalidation" below).
+TASKS_SCOPE = "tasks"
+NOTES_SCOPE = "notes"
+STUDY_SCOPE = "study"
+EXAM_REF_SCOPE = "exam_ref"
 
 _client: redis.Redis | None = None
 _client_loop: asyncio.AbstractEventLoop | None = None
@@ -71,6 +78,20 @@ async def set_json(key: str, value: Any, ttl_seconds: int | None = None) -> None
         logger.warning("cache set failed for key=%s", key, exc_info=True)
 
 
+async def mset_json(items: dict[str, Any], ttl_seconds: int | None = None) -> None:
+    """Batch `set_json`: every entry written in one pipelined round trip."""
+    client = _get_client()
+    if client is None or not items:
+        return
+    try:
+        async with client.pipeline(transaction=False) as pipe:
+            for key, value in items.items():
+                pipe.set(key, json.dumps(value), ex=ttl_seconds or settings.cache_ttl_seconds)
+            await pipe.execute()
+    except redis.RedisError:
+        logger.warning("cache mset failed for %d keys", len(items), exc_info=True)
+
+
 async def delete(*keys: str) -> None:
     """Evict one or more cache keys."""
     client = _get_client()
@@ -92,6 +113,59 @@ async def incr(key: str) -> int | None:
     except redis.RedisError:
         logger.warning("cache incr failed for key=%s", key, exc_info=True)
         return None
+
+
+async def mget_json(keys: list[str]) -> list[Any | None]:
+    """Batch `get_json`: one round trip, None for each miss (or for every key on failure)."""
+    client = _get_client()
+    if client is None or not keys:
+        return [None] * len(keys)
+    try:
+        raws = await client.mget(keys)
+    except redis.RedisError:
+        logger.warning("cache mget failed for %d keys", len(keys), exc_info=True)
+        return [None] * len(keys)
+    return [json.loads(raw) if raw is not None else None for raw in raws]
+
+
+# --- versioned invalidation -------------------------------------------------
+#
+# Each (scope, subject) pair -- e.g. ("notes", <owner uuid>) -- has an integer
+# version. Cached entries embed the version in their key, so bumping it orphans
+# every entry at once. An atomic INCR (rather than deleting known keys) also
+# closes the read/write race: a reader that started before a mutation commits
+# but writes after it lands under the old, now-unreachable version and just
+# expires via TTL. Callers must read the version *before* querying the DB.
+
+
+def _version_key(scope: str, subject: uuid.UUID | str) -> str:
+    return f"{scope}:version:{subject}"
+
+
+async def get_versions(
+    scopes: tuple[str, ...], subjects: list[uuid.UUID | str]
+) -> dict[uuid.UUID | str, tuple[int, ...]]:
+    """Current versions of every scope for every subject, in a single round trip."""
+    raws = await mget_json(
+        [_version_key(scope, subject) for subject in subjects for scope in scopes]
+    )
+    width = len(scopes)
+    return {
+        subject: tuple(
+            raw if isinstance(raw, int) else 0 for raw in raws[i * width : (i + 1) * width]
+        )
+        for i, subject in enumerate(subjects)
+    }
+
+
+async def get_version(scope: str, subject: uuid.UUID | str) -> int:
+    """Current version of one scope for one subject (0 if never bumped)."""
+    return (await get_versions((scope,), [subject]))[subject][0]
+
+
+async def bump_version(scope: str, subject: uuid.UUID | str) -> None:
+    """Invalidate everything cached under (scope, subject)."""
+    await incr(_version_key(scope, subject))
 
 
 async def close() -> None:

@@ -15,6 +15,15 @@ from app.models import Base
 TEST_DATABASE_URL = settings.test_database_url or settings.database_url
 
 
+@pytest.fixture(autouse=True)
+def _disable_redis(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Tests seed the DB directly and roll back, so a shared Redis (the .env one
+    is a real Upstash instance) would serve stale data across tests. Cache tests
+    opt back in with an in-memory fake (see tests/test_cache.py).
+    """
+    monkeypatch.setattr(settings, "redis_url", None)
+
+
 @pytest.fixture(scope="session", autouse=True)
 def _create_schema() -> None:
     async def _run() -> None:

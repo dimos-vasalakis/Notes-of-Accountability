@@ -27,7 +27,7 @@ async def create_note(
 async def list_notes(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-) -> list[Note]:
+) -> list[NoteRead]:
     """List all notes belonging to the authenticated user."""
     return await note_service.list_notes(db, current_user.id)
 
@@ -37,7 +37,7 @@ async def get_note(
     note_id: uuid.UUID,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-) -> Note:
+) -> NoteRead:
     """Fetch a single note by id, scoped to its owner."""
     return await note_service.get_note(db, current_user.id, note_id)
 

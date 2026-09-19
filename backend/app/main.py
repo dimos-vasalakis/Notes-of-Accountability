@@ -32,7 +32,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     await cache.close()
 
 
-app = FastAPI(title="Note of Accountability API", lifespan=lifespan)
+app = FastAPI(title="Notes of Accountability API", lifespan=lifespan)
 
 # Order matters: middleware runs outside-in in the order added, so CORS wraps
 # rate limiting wraps request logging (added last, so it sees every response).

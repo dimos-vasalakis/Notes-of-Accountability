@@ -6,19 +6,10 @@ from datetime import UTC, datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from app.core.cache import get_json, incr, set_json
+from app.core.cache import TASKS_SCOPE, bump_version, get_json, get_version, set_json
 from app.core.exceptions import NotFoundError
 from app.models.task import Task, TaskStatus
 from app.schemas.task import TaskCreate, TaskRead, TaskUpdate
-
-
-def _version_key(owner_id: uuid.UUID) -> str:
-    return f"tasks:version:{owner_id}"
-
-
-async def _current_version(owner_id: uuid.UUID) -> int:
-    version = await get_json(_version_key(owner_id))
-    return version if isinstance(version, int) else 0
 
 
 def _list_cache_key(owner_id: uuid.UUID, status: TaskStatus | None, version: int) -> str:
@@ -30,14 +21,11 @@ def _item_cache_key(owner_id: uuid.UUID, task_id: uuid.UUID, version: int) -> st
 
 
 async def _invalidate_task_cache(owner_id: uuid.UUID) -> None:
-    """Bump the owner's cache version so every existing list/item key is orphaned.
+    """Orphan the owner's cached task lists/items (see app.core.cache versioning).
 
-    An atomic INCR (rather than deleting known keys) closes the read/write race
-    where a concurrent list_tasks/get_task started before this mutation commits
-    but finishes (and writes to the cache) after it: that write lands under the
-    old, now-unreachable version and simply expires via TTL instead of being read.
+    Task completion also feeds streaks, which are keyed on this same version.
     """
-    await incr(_version_key(owner_id))
+    await bump_version(TASKS_SCOPE, owner_id)
 
 
 async def _get_owned_task(db: AsyncSession, owner_id: uuid.UUID, task_id: uuid.UUID) -> Task:
@@ -70,7 +58,7 @@ async def list_tasks(
     db: AsyncSession, owner_id: uuid.UUID, status: TaskStatus | None = None
 ) -> list[TaskRead]:
     """List a user's tasks, optionally narrowed to a single status. Cache-aside over Redis."""
-    version = await _current_version(owner_id)
+    version = await get_version(TASKS_SCOPE, owner_id)
     cache_key = _list_cache_key(owner_id, status, version)
     cached = await get_json(cache_key)
     if cached is not None:
@@ -88,7 +76,7 @@ async def list_tasks(
 
 async def get_task(db: AsyncSession, owner_id: uuid.UUID, task_id: uuid.UUID) -> TaskRead:
     """Fetch a single task by id, raising if it doesn't exist or isn't owned by the user."""
-    version = await _current_version(owner_id)
+    version = await get_version(TASKS_SCOPE, owner_id)
     cache_key = _item_cache_key(owner_id, task_id, version)
     cached = await get_json(cache_key)
     if cached is not None:
