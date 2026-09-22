@@ -41,7 +41,7 @@ export function Landing() {
       <header className="flex items-center justify-between">
         <span className="flex items-center gap-2 font-display text-lg font-semibold">
           <img src="/logo-mark.png" alt="" className="h-7 w-7 rounded-lg" />
-          NoA
+          Notes of Accountability
         </span>
         <Link
           href="/login"

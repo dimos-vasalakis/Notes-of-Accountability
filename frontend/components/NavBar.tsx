@@ -75,6 +75,14 @@ export function NavBar() {
   const links = LINKS.filter((link) => !link.studentOnly || user.is_student);
   async function handleLogout() {
     await logout();
+    // Logging out invalidates the whole in-app history stack, so a single
+    // press of the back button should land on the landing page rather than
+    // stepping back through now-unreachable authenticated pages. Advancing
+    // initialPathname here too keeps the pathname-watching effect below from
+    // immediately flipping hasNavigatedInApp back to true once the route
+    // changes to /login.
+    hasNavigatedInApp.current = false;
+    initialPathname.current = "/login";
     router.push("/login");
     router.refresh();
   }
@@ -87,7 +95,7 @@ export function NavBar() {
             {canGoBack && backButton}
             <Link href="/" className="flex items-center gap-2 font-display text-lg font-semibold">
               <img src="/logo-mark.png" alt="" className="h-7 w-7 rounded-lg" />
-              NoA
+              Notes of Accountability
               <span className="text-xs font-normal text-text-faint">v2</span>
             </Link>
           </div>
