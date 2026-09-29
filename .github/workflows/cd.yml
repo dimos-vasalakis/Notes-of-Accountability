@@ -42,8 +42,14 @@ jobs:
           target: ${{ matrix.target }}
           push: true
           tags: ${{ secrets.REGISTRY }}/noa-${{ matrix.image }}:${{ github.sha }},${{ secrets.REGISTRY }}/noa-${{ matrix.image }}:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # Scoped per image: the default scope is shared across the whole
+          # matrix (keyed by git ref, not matrix value), so backend and
+          # frontend were clobbering each other's cache entries mid-run.
+          cache-from: type=gha,scope=${{ matrix.image }}
+          # mode=min (not max): ghcr.io intermittently 400s the blob HEAD
+          # check for cached intermediate-stage layers that mode=max
+          # uploads; min only caches the final stage we actually push.
+          cache-to: type=gha,scope=${{ matrix.image }},mode=min
           # Some registries 400 on the HEAD request for buildx's default
           # provenance/SBOM attestation blobs; disable them.
           provenance: false
