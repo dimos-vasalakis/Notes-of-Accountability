@@ -44,3 +44,7 @@ jobs:
           tags: ${{ secrets.REGISTRY }}/noa-${{ matrix.image }}:${{ github.sha }},${{ secrets.REGISTRY }}/noa-${{ matrix.image }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          # Some registries 400 on the HEAD request for buildx's default
+          # provenance/SBOM attestation blobs; disable them.
+          provenance: false
+          sbom: false
