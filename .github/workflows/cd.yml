@@ -1,12 +1,11 @@
 name: CD
 
-# Disabled for now: manual trigger only. Once ready to enable, uncomment the
-# push trigger below and set the registry secrets (REGISTRY, REGISTRY_USERNAME,
-# REGISTRY_PASSWORD) in the repo settings.
+# Requires the REGISTRY, REGISTRY_USERNAME, REGISTRY_PASSWORD secrets to be
+# set in the repo settings.
 on:
   workflow_dispatch: {}
-  # push:
-  #   branches: [main]
+  push:
+    branches: [main]
 
 jobs:
   build-and-push:

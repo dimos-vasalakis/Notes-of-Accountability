@@ -1,13 +1,11 @@
 name: CI
 
-# Disabled for now: manual trigger only. Once ready to enable, uncomment the
-# push/pull_request triggers below.
 on:
   workflow_dispatch: {}
-  # push:
-  #   branches: [main]
-  # pull_request:
-  #   branches: [main]
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
 
 jobs:
   backend-test:
