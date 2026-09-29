@@ -41,16 +41,19 @@ jobs:
           file: ${{ matrix.dockerfile }}
           target: ${{ matrix.target }}
           push: true
-          tags: ${{ secrets.REGISTRY }}/noa-${{ matrix.image }}:${{ github.sha }},${{ secrets.REGISTRY }}/noa-${{ matrix.image }}:latest
+          # ghcr.io requires an owner segment in the repo path
+          # (ghcr.io/<owner>/<image>), separate from the bare hostname used
+          # to log in above. A REGISTRY secret set to just "ghcr.io" (no
+          # owner) produced an owner-less push path, which ghcr.io's backend
+          # rejected with a malformed 400 on the blob HEAD check instead of
+          # a clean error.
+          tags: ${{ secrets.REGISTRY }}/${{ github.repository_owner }}/noa-${{ matrix.image }}:${{ github.sha }},${{ secrets.REGISTRY }}/${{ github.repository_owner }}/noa-${{ matrix.image }}:latest
           # Scoped per image: the default scope is shared across the whole
           # matrix (keyed by git ref, not matrix value), so backend and
-          # frontend were clobbering each other's cache entries mid-run.
+          # frontend would otherwise share one cache entry.
           cache-from: type=gha,scope=${{ matrix.image }}
-          # mode=min (not max): ghcr.io intermittently 400s the blob HEAD
-          # check for cached intermediate-stage layers that mode=max
-          # uploads; min only caches the final stage we actually push.
           cache-to: type=gha,scope=${{ matrix.image }},mode=min
-          # Some registries 400 on the HEAD request for buildx's default
-          # provenance/SBOM attestation blobs; disable them.
+          # Some registries reject buildx's default provenance/SBOM
+          # attestation blobs; disable them defensively.
           provenance: false
           sbom: false
