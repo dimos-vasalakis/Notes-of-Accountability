@@ -41,7 +41,6 @@ frontend/
   lib/                # API client, hooks, shared types
   components/         # Shared UI components
 
-nginx/                # Reverse proxy config for production
 ```
 
 ## Getting Started
