@@ -10,6 +10,9 @@ class Settings(BaseSettings):
 
     environment: str = "development"
     database_url: str
+    # Supabase: DATABASE_URL points at the pooler (Supavisor); migrations need a
+    # direct or session-mode connection (port 5432). Falls back to database_url.
+    migration_database_url: str | None = None
     test_database_url: str | None = None
 
     secret_key: str

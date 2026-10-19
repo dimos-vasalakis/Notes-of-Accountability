@@ -25,7 +25,7 @@ A day counts toward your streak if you completed at least one task **or** logged
 | --- | --- |
 | Backend | Python 3.11, FastAPI, SQLModel (async, SQLAlchemy 2.0), Alembic, Pydantic v2, APScheduler |
 | Frontend | TypeScript, Next.js 15 (App Router), React 18, Tailwind CSS 4 |
-| Database | PostgreSQL 15 |
+| Database | PostgreSQL 15 (local Compose) or [Supabase](https://supabase.com) Postgres |
 | Cache | Optional Redis (Upstash TCP / `rediss://`). If `REDIS_URL` is unset or Redis is down, the API hits Postgres instead |
 | Push | Web Push (VAPID, `pywebpush`) |
 | Architecture | Layered — routers → services → models/schemas |
@@ -75,6 +75,7 @@ cp frontend/.env.local.example frontend/.env.local
 | --- | --- | --- |
 | `.env` | `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | Compose Postgres credentials |
 | `backend/.env` | `DATABASE_URL` | Async Postgres URL. Host Postgres from Compose is mapped to **localhost:5433** |
+| `backend/.env` | `MIGRATION_DATABASE_URL` | Optional. Supabase session/direct URL (port 5432) used by Alembic; falls back to `DATABASE_URL` |
 | `backend/.env` | `SECRET_KEY` | JWT signing secret — change the default |
 | `backend/.env` | `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` | Web push. Jobs no-op if keys are empty |
 | `backend/.env` | `REDIS_URL` | Optional. TCP endpoint (`rediss://…`), not the REST URL |
@@ -87,6 +88,15 @@ Generate a VAPID key pair:
 ```bash
 npx web-push generate-vapid-keys
 ```
+
+### Using Supabase
+
+Copy the connection string from Supabase (Project Settings > Database), switch the scheme to `postgresql+asyncpg://`, and append `?ssl=require`:
+
+- `DATABASE_URL`: transaction pooler, port **6543** (prepared statements are disabled automatically for it)
+- `MIGRATION_DATABASE_URL`: session pooler or direct connection, port **5432** (used by `alembic`)
+
+Use a separate Supabase project (or schema) for `TEST_DATABASE_URL`; tests create and drop tables. With Compose, remove the `DATABASE_URL` override on the `backend` service so it uses `backend/.env`.
 
 ### Run with Docker Compose
 
